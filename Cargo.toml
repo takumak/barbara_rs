@@ -1,0 +1,20 @@
+[package]
+name = "mps2_an521_rs"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.tock-registers]
+git = "https://github.com/tock/tock"
+rev = "b8f5da9c09373a5bbf48e70e9cef16d669f3cdde"
+
+[build-dependencies]
+cc = "1.0"
+
+[profile.dev]
+panic = "abort" # disable stack unwinding on panic
+
+# the profile used for `cargo build --release`
+[profile.release]
+panic = "abort" # disable stack unwinding on panic
