@@ -21,7 +21,12 @@ pub fn main() -> ! {
     println!("=========================================");
 
     unsafe {
-        asm!("bkpt 0x80")
+        asm!(
+            "mov r11, #0xbeef",
+            "movt r11, #0xdead",
+            "bkpt 0x80",
+            out("r11") _
+        )
     }
 
     semihosting::shutdown();
