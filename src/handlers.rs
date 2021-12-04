@@ -3,11 +3,6 @@ use core::{
     ptr,
 };
 
-fn section_size(start: &u8, end: &u8) -> usize {
-    end as *const u8 as usize -
-        start as *const u8 as usize
-}
-
 #[no_mangle]
 #[naked]
 pub unsafe extern "C" fn __reset() {
@@ -37,10 +32,14 @@ fn __init_runtime() {
     }
 
     unsafe {
-        let size = section_size(&__bss_start, &__bss_end);
+        let size =
+            &__bss_end as *const u8 as usize -
+            &__bss_start as *const u8 as usize;
         ptr::write_bytes(&mut __bss_start as *mut u8, 0, size);
 
-        let size = section_size(&__data_start, &__data_end);
+        let size =
+            &__data_end as *const u8 as usize -
+            &__data_start as *const u8 as usize;
         ptr::copy_nonoverlapping(&__rodata_start as *const u8,
                                  &mut __data_start as *mut u8,
                                  size);
