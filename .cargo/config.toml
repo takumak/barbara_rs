@@ -2,6 +2,7 @@
 target = "thumbv8m.main-none-eabi"
 rustflags = [
   "-C", "link-arg=-Tlink.x",
+  "-C", "force-frame-pointers=y",
 ]
 
 [target.thumbv8m.main-none-eabi]

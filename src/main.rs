@@ -5,6 +5,7 @@
 #![feature(naked_functions)]
 
 mod handlers;
+mod backtrace;
 mod semihosting;
 mod console;
 mod arm_uart;
