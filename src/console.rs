@@ -44,7 +44,7 @@ pub fn init() {
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::console::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::console::print_fmt(format_args!($($arg)*)));
 }
 
 #[macro_export]
@@ -54,7 +54,7 @@ macro_rules! println {
 }
 
 #[doc(hidden)]
-pub fn _print(args: fmt::Arguments) {
+pub fn print_fmt(args: fmt::Arguments) {
     use crate::__CONSOLE;
     let mut writer = Writer::new(__CONSOLE);
     let _ = writer.write_fmt(args);
