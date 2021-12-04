@@ -15,9 +15,9 @@ const __CONSOLE: *mut ArmUart = 0x4020_0000 as *mut ArmUart;
 
 pub fn main() -> ! {
     console::init();
-    println!("=====================================");
-    println!("mps2-an521 'Hello world' DEMO in Rust");
-    println!("=====================================");
+    println!("=========================================");
+    println!("  mps2-an521 'Hello world' DEMO in Rust  ");
+    println!("=========================================");
     semihosting::shutdown();
     loop {};
 }
