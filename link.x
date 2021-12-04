@@ -1,18 +1,18 @@
 MEMORY
 {
-    BOOT  : ORIGIN = 0x10000000, LENGTH = 4K
-    ROM   : ORIGIN = 0x38000000, LENGTH = 64K
-    RAM   : ORIGIN = 0x38010000, LENGTH = 64K
-    STACK : ORIGIN = 0x38020000, LENGTH = 16K
-    EXIDX : ORIGIN = 0x38030000, LENGTH = 16K
+    VECTOR : ORIGIN = 0x10000000, LENGTH = 4K
+    ROM    : ORIGIN = 0x38000000, LENGTH = 64K
+    RAM    : ORIGIN = 0x38010000, LENGTH = 64K
+    STACK  : ORIGIN = 0x38020000, LENGTH = 16K
+    EXIDX  : ORIGIN = 0x38030000, LENGTH = 16K
 }
 
 SECTIONS
 {
-    .vector_table ORIGIN(BOOT) :
+    .vector_table ORIGIN(VECTOR) :
     {
         KEEP(*(.vector_table));
-    } > BOOT
+    } > VECTOR
 
     .rom ORIGIN(ROM) :
     {
