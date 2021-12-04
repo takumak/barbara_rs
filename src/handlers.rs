@@ -4,25 +4,7 @@ use core::{
 };
 
 #[no_mangle]
-#[naked]
 pub unsafe extern "C" fn __reset() {
-    asm!(
-        // init sp
-        "ldr r0, =__stack_bottom",
-        "mov sp, r0",
-
-        // disable irq
-        "cpsid i",
-
-        // goto Rust function
-        "ldr r0, =__init_runtime",
-        "bx r0",
-        options(noreturn),
-    )
-}
-
-#[no_mangle]
-fn __init_runtime() {
     extern "C" {
         static mut __bss_start: u8;
         static mut __bss_end: u8;
@@ -31,19 +13,20 @@ fn __init_runtime() {
         static __rodata_start: u8;
     }
 
-    unsafe {
-        let size =
-            &__bss_end as *const u8 as usize -
-            &__bss_start as *const u8 as usize;
-        ptr::write_bytes(&mut __bss_start as *mut u8, 0, size);
+    let size =
+        &__bss_end as *const u8 as usize -
+        &__bss_start as *const u8 as usize;
+    ptr::write_bytes(&mut __bss_start as *mut u8, 0, size);
 
-        let size =
-            &__data_end as *const u8 as usize -
-            &__data_start as *const u8 as usize;
-        ptr::copy_nonoverlapping(&__rodata_start as *const u8,
-                                 &mut __data_start as *mut u8,
-                                 size);
-    }
+    let size =
+        &__data_end as *const u8 as usize -
+        &__data_start as *const u8 as usize;
+    ptr::copy_nonoverlapping(&__rodata_start as *const u8,
+                             &mut __data_start as *mut u8,
+                             size);
+
+    // disable interrupt
+    asm!("cpsid i");
 
     use crate::main;
     main()
@@ -60,6 +43,7 @@ union Vector {
 }
 
 extern "C" {
+    fn __stack_bottom();
     fn __nmi();
     fn __hardfault();
     fn __memmanage();
@@ -75,7 +59,7 @@ extern "C" {
 #[no_mangle]
 #[link_section = ".vector_table"]
 static __vector_table: [Vector; 16] = [
-    Vector { reserved: 0 }, // sp limit
+    Vector { handler: __stack_bottom }, // initial sp
     Vector { handler: __reset },
     Vector { handler: __nmi },
     Vector { handler: __hardfault },
