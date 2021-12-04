@@ -18,6 +18,11 @@ pub fn main() -> ! {
     println!("=========================================");
     println!("  mps2-an521 'Hello world' DEMO in Rust  ");
     println!("=========================================");
+
+    unsafe {
+        asm!("bkpt 0x80")
+    }
+
     semihosting::shutdown();
     loop {};
 }
