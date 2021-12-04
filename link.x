@@ -4,7 +4,6 @@ MEMORY
     ROM    : ORIGIN = 0x38000000, LENGTH = 64K
     RAM    : ORIGIN = 0x38010000, LENGTH = 64K
     STACK  : ORIGIN = 0x38020000, LENGTH = 16K
-    EXIDX  : ORIGIN = 0x38030000, LENGTH = 16K
 }
 
 SECTIONS
@@ -50,10 +49,12 @@ SECTIONS
         __stack_bottom = .;
     } > STACK
 
-    .ARM.exidx ORIGIN(EXIDX) :
+    /DISCARD/ :
     {
         *(.ARM.exidx);
-    } > EXIDX
+        *(.ARM.exidx.*);
+        *(.ARM.extab.*);
+    }
 }
 
 PROVIDE(__nmi         = DefaultExceptionHandler);
