@@ -4,7 +4,7 @@ use core::{
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn __reset() {
+unsafe extern "C" fn __reset() {
     extern "C" {
         static mut __bss_start: u8;
         static mut __bss_end: u8;
@@ -99,7 +99,7 @@ struct ExceptionRegs {
 
 #[no_mangle]
 #[naked]
-pub unsafe extern "C" fn DefaultExceptionHandler() {
+unsafe extern "C" fn DefaultExceptionHandler() {
     /*
 
     +----------------+  <- Next SP
