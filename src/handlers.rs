@@ -163,6 +163,18 @@ unsafe extern "C" fn __unhandled_exception(regs_addr: usize) {
     println!("r1 : {:08x}  r0 : {:08x}", regs.r1, regs.r0);
     println!("pstate : {:08x}", regs.pstate);
 
+    println!();
+    println!("Backtrace:");
+    use crate::backtrace::backtrace;
+    backtrace(
+        regs.return_address as usize,
+        regs.r7 as usize,
+        10,
+        |addr: usize| {
+            println!("  {:08x}", addr)
+        }
+    );
+
     use crate::semihosting;
     semihosting::shutdown();
 
