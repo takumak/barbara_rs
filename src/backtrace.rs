@@ -53,6 +53,7 @@ pub fn unwind_walk(pc: usize, fp: usize, limit: u32, func: fn(usize)) {
     }
 }
 
+#[allow(dead_code)]
 pub fn trace(limit: u32, func: fn(usize)) {
     unsafe {
         let fp: usize;

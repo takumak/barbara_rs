@@ -20,16 +20,6 @@ pub fn main() -> ! {
     println!("  mps2-an521 'Hello world' DEMO in Rust  ");
     println!("=========================================");
 
-    println!();
-    println!("Backtrace:");
-    backtrace::trace(
-        10,
-        |addr: usize| {
-            println!("  {:#08x}", addr)
-        }
-    );
-    println!();
-
     unsafe {
         asm!(
             "mov r11, #0xbeef",
