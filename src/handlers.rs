@@ -165,13 +165,13 @@ unsafe extern "C" fn __unhandled_exception(regs_addr: usize) {
 
     println!();
     println!("Backtrace:");
-    use crate::backtrace::backtrace;
-    backtrace(
+    use crate::backtrace;
+    backtrace::unwind_walk(
         regs.return_address as usize,
         regs.r7 as usize,
         10,
         |addr: usize| {
-            println!("  {:08x}", addr)
+            println!("  {:#08x}", addr)
         }
     );
 

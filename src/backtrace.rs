@@ -19,7 +19,7 @@ struct StackFrame {
     lr: usize,
 }
 
-pub fn backtrace(pc: usize, fp: usize, limit: u32, func: fn(usize)) {
+pub fn unwind_walk(pc: usize, fp: usize, limit: u32, func: fn(usize)) {
     unsafe {
         extern "C" {
             static __text_s: u8;
