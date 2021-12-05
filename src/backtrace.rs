@@ -52,3 +52,12 @@ pub fn unwind_walk(pc: usize, fp: usize, limit: u32, func: fn(usize)) {
         }
     }
 }
+
+pub fn trace(limit: u32, func: fn(usize)) {
+    unsafe {
+        let fp: usize;
+        asm!("mov {}, r7", out(reg) fp);
+        let ref frame: StackFrame = *(fp as *const StackFrame);
+        unwind_walk(frame.lr, frame.fp, limit, func);
+    }
+}
