@@ -9,9 +9,9 @@ mod backtrace;
 mod semihosting;
 mod console;
 mod arm_uart;
+mod kallsyms;
 
 use arm_uart::ArmUart;
-
 const __CONSOLE: *mut ArmUart = 0x4020_0000 as *mut ArmUart;
 
 pub fn main() -> ! {
