@@ -34,6 +34,7 @@ unsafe extern "C" fn __reset() {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
+    unsafe { asm!("bkpt 0x80") }
     loop {};
 }
 
