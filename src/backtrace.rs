@@ -22,10 +22,14 @@ struct StackFrame {
 pub fn backtrace(pc: usize, fp: usize, limit: u32, func: fn(usize)) {
     unsafe {
         extern "C" {
+            static __text_s: u8;
+            static __text_e: u8;
             static __stack_s: u8;
             static __stack_e: u8;
         }
 
+        let text_s = &__text_s as *const u8 as usize;
+        let text_e = &__text_e as *const u8 as usize;
         let stack_s = &__stack_s as *const u8 as usize;
         let stack_e = &__stack_e as *const u8 as usize;
 
@@ -39,7 +43,7 @@ pub fn backtrace(pc: usize, fp: usize, limit: u32, func: fn(usize)) {
             }
 
             let ref frame: StackFrame = *(fp_ as *const StackFrame);
-            if frame.lr & 0xf000_0000 == 0xf000_0000 {
+            if frame.lr < text_s || frame.lr >= text_e {
                 break;
             }
 

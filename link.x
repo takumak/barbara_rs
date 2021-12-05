@@ -15,7 +15,9 @@ SECTIONS
 
     .rom ORIGIN(ROM) :
     {
+        __text_s = .;
         *(.text .text.*);
+        __text_e = .;
 
         /* for `-C relocation-model=pic` */
         *(.got .got.*);
