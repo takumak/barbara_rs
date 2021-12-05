@@ -21,32 +21,32 @@ SECTIONS
         *(.got .got.*);
 
         . = ALIGN(4);
-        __rodata_start = .;
+        __rodata_s = .;
         *(.rodata .rodata.*);
         . = ALIGN(4);
-        __rodata_end = .;
+        __rodata_e = .;
     } > ROM
 
     .ram ORIGIN(RAM) :
     {
         . = ALIGN(4);
-        __data_start = .;
+        __data_s = .;
         *(.data .data.*);
         . = ALIGN(4);
-        __data_end = .;
+        __data_e = .;
 
         . = ALIGN(4);
-        __bss_start = .;
+        __bss_s = .;
         *(.bss .bss.*);
         . = ALIGN(4);
-        __bss_end = .;
+        __bss_e = .;
     } > RAM
 
     .stack ORIGIN(STACK) :
     {
-        __stack_top = .;
+        __stack_s = .;
         . += LENGTH(STACK);
-        __stack_bottom = .;
+        __stack_e = .;
     } > STACK
 
     /DISCARD/ :

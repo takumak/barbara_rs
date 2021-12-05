@@ -22,18 +22,19 @@ struct StackFrame {
 pub fn backtrace(pc: usize, fp: usize, limit: u32, func: fn(usize)) {
     unsafe {
         extern "C" {
-            static __stack_top: u8;
-            static __stack_bottom: u8;
+            static __stack_s: u8;
+            static __stack_e: u8;
         }
 
-        let top = &__stack_top as *const u8 as usize;
-        let bottom = &__stack_bottom as *const u8 as usize;
+        let stack_s = &__stack_s as *const u8 as usize;
+        let stack_e = &__stack_e as *const u8 as usize;
+
         let mut fp_ = fp;
 
         func(pc);
 
         for _i in 1..limit {
-            if fp_ < top || fp_ >= bottom {
+            if fp_ < stack_s || fp_ >= stack_e {
                 break;
             }
 

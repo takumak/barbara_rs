@@ -6,23 +6,23 @@ use core::{
 #[no_mangle]
 unsafe extern "C" fn __reset() {
     extern "C" {
-        static mut __bss_start: u8;
-        static mut __bss_end: u8;
-        static mut __data_start: u8;
-        static mut __data_end: u8;
-        static __rodata_start: u8;
+        static mut __bss_s: u8;
+        static mut __bss_e: u8;
+        static mut __data_s: u8;
+        static mut __data_e: u8;
+        static __rodata_s: u8;
     }
 
     let size =
-        &__bss_end as *const u8 as usize -
-        &__bss_start as *const u8 as usize;
-    ptr::write_bytes(&mut __bss_start as *mut u8, 0, size);
+        &__bss_e as *const u8 as usize -
+        &__bss_s as *const u8 as usize;
+    ptr::write_bytes(&mut __bss_s as *mut u8, 0, size);
 
     let size =
-        &__data_end as *const u8 as usize -
-        &__data_start as *const u8 as usize;
-    ptr::copy_nonoverlapping(&__rodata_start as *const u8,
-                             &mut __data_start as *mut u8,
+        &__data_e as *const u8 as usize -
+        &__data_s as *const u8 as usize;
+    ptr::copy_nonoverlapping(&__rodata_s as *const u8,
+                             &mut __data_s as *mut u8,
                              size);
 
     // disable interrupt
@@ -43,7 +43,7 @@ union Vector {
 }
 
 extern "C" {
-    fn __stack_bottom();
+    fn __stack_e();
     fn __nmi();
     fn __hardfault();
     fn __memmanage();
@@ -59,7 +59,7 @@ extern "C" {
 #[no_mangle]
 #[link_section = ".vector_table"]
 static __vector_table: [Vector; 16] = [
-    Vector { handler: __stack_bottom }, // initial sp
+    Vector { handler: __stack_e }, // initial sp
     Vector { handler: __reset },
     Vector { handler: __nmi },
     Vector { handler: __hardfault },
