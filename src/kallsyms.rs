@@ -1,15 +1,13 @@
 /*
  *  +00  +---------+
- *       |  magic  |                   4 bytes
- *  +04  +---------+
  *       |  count  |                   4 bytes
- *  +08  +---------+---------+
+ *  +04  +---------+---------+
  *       |   addr  |   off   |         4+4 bytes
- *  +10  +---------+---------+
+ *  +0c  +---------+---------+
  *       |   addr  |   off   |         4+4 bytes
- *  +18  +---------+---------+
+ *  +14  +---------+---------+
  *       |   addr  |   off   |         4+4 bytes
- *  +20  +---------+---------+
+ *       +---------+---------+
  *      ... `count` entries ...
  *       +-------------------+
  *       |  null separated   |
@@ -17,11 +15,10 @@
  *       +-------------------+
  */
 
-const MAGIC: u32 = 0xea805138;
+const HEADER_SIZE: usize = 4;
 
 #[derive(Clone, Copy)]
 struct KAllSymsHeader {
-    magic: u32,
     count: u32,
 }
 
@@ -101,19 +98,14 @@ impl KAllSyms {
         }
         let base = unsafe { &__kallsyms as *const _ as usize };
         let header = unsafe { *(base as *const KAllSymsHeader) };
-        let count = if header.magic == MAGIC {
-            header.count
-        } else {
-            0
-        };
         KAllSyms {
             base,
-            count: count as usize,
+            count: header.count as usize,
         }
     }
 
     fn nth_entry(&self, i: usize) -> *const SymbolEntry {
-        let top = self.base + 8;
+        let top = self.base + HEADER_SIZE;
         let ptr = top as *const SymbolEntry;
         unsafe { ptr.add(i) }
     }
@@ -128,9 +120,8 @@ impl KAllSyms {
     }
 
     fn iter(&self) -> SymbolIterator {
-        let top = self.base + 8;
-        let ptr = top as *const SymbolEntry;
-        let end = unsafe { ptr.add(self.count) };
+        let ptr = self.nth_entry(0);
+        let end = self.nth_entry(self.count);
         SymbolIterator { ptr, end }
     }
 

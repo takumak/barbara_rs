@@ -5,27 +5,43 @@ import os
 import subprocess
 import kallsyms
 
+LD_COMMAND = 'rust-lld'
+#LD_COMMAND = 'arm-none-eabi-ld'
+
 args = sys.argv[1:]
 assert '-o' in args
 assert args.index('-o') + 1 < len(args)
 
-idx = args.index('-o') + 1
-out = args[idx]
+o_idx = args.index('-o') + 1
+out = args[o_idx]
 outdir = os.path.dirname(out)
 outname = os.path.basename(out)
-out_tmp = os.path.join(outdir, '._tmp_%s' % outname)
-args[idx] = out_tmp
 
-subprocess.run(['rust-lld', *args], check=True)
-filename = os.path.join(outdir, 'kallsyms.bin')
-with open(filename, 'wb') as f:
-    f.write(kallsyms.symbol_table(out_tmp))
-subprocess.run(
-    [
-        'arm-none-eabi-objcopy',
-        '--update-section', '.kallsyms=%s' % filename,
-        out_tmp,
-        out,
-    ],
-    check=True
-)
+tmpouts = []
+for i in range(4):
+    # see comments in linux/scripts/link_vmlinux.sh
+    # to answer "why iterate multiple times" question
+
+    out_tmp = os.path.join(outdir, f'._tmp_{i}_{outname}')
+    tmpouts.append(out_tmp)
+    args[o_idx] = out_tmp
+
+    if i == 0:
+        subprocess.run([LD_COMMAND, *args], check=True)
+    else:
+        print(f'iteration {i}')
+        # generate kallsyms from previous output
+        table = kallsyms.symbol_table(tmpouts[-2])
+        ldscript = f'{out_tmp}.ld'
+        with open(ldscript, 'w') as ldout:
+            kallsyms.ldscript(table, ldout)
+        subprocess.run([LD_COMMAND, *args, f'-T{ldscript}'], check=True)
+        # varidate
+        newtable = kallsyms.symbol_table(out_tmp)
+        if newtable == table:
+            print(f'symbol table matched')
+            import shutil
+            shutil.copy(out_tmp, out)
+            break
+else:
+    raise RuntimeError('Could not generate kallsyms table')

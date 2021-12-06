@@ -3,6 +3,7 @@
 #![feature(asm)]
 #![feature(global_asm)]
 #![feature(naked_functions)]
+#![feature(linkage)]
 
 mod handlers;
 mod backtrace;
