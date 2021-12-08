@@ -64,9 +64,14 @@ impl KAllSyms {
             self.name_table_off, i);
         let mut buf_i: usize = 0;
         for tok_i in tokens {
+            use core::cmp;
             let token = self.nth_token(*tok_i);
-            buf[buf_i..(buf_i + token.len())].copy_from_slice(token);
+            let wlen = cmp::min(buf.len() - buf_i, token.len());
+            buf[buf_i..(buf_i + wlen)].copy_from_slice(&token[..wlen]);
             buf_i += token.len();
+            if buf_i >= buf.len() {
+                break
+            }
         }
         core::str::from_utf8(&buf[..buf_i]).unwrap()
     }
