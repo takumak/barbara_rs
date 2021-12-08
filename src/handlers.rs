@@ -3,27 +3,35 @@ use core::{
     ptr,
 };
 
+#[macro_export]
+macro_rules! decl_c_symbol_addr {
+    ($sym_name: ident, $wrapper_name: ident) => {
+        extern "C" {
+            static $sym_name: u8;
+        }
+        #[inline]
+        fn $wrapper_name() -> usize {
+            unsafe { &$sym_name as *const _ as usize }
+        }
+    }
+}
+
+decl_c_symbol_addr!(__bss_s, bss_s);
+decl_c_symbol_addr!(__bss_e, bss_e);
+decl_c_symbol_addr!(__data_s, data_s);
+decl_c_symbol_addr!(__data_e, data_e);
+decl_c_symbol_addr!(__rodata_s, rodata_s);
+
 #[no_mangle]
 unsafe extern "C" fn __reset() {
-    extern "C" {
-        static mut __bss_s: u8;
-        static mut __bss_e: u8;
-        static mut __data_s: u8;
-        static mut __data_e: u8;
-        static __rodata_s: u8;
-    }
+    let size = bss_e() - bss_s();
+    ptr::write_bytes(bss_s() as *mut u8, 0, size);
 
-    let size =
-        &__bss_e as *const u8 as usize -
-        &__bss_s as *const u8 as usize;
-    ptr::write_bytes(&mut __bss_s as *mut u8, 0, size);
-
-    let size =
-        &__data_e as *const u8 as usize -
-        &__data_s as *const u8 as usize;
-    ptr::copy_nonoverlapping(&__rodata_s as *const u8,
-                             &mut __data_s as *mut u8,
-                             size);
+    let size = data_e() - data_s();
+    ptr::copy_nonoverlapping(
+        rodata_s() as *const u8,
+        data_s() as *mut u8,
+        size);
 
     // disable interrupt
     asm!("cpsid i");
