@@ -1,131 +1,77 @@
-/*
- *  +00  +---------+
- *       |  count  |                   4 bytes
- *  +04  +---------+---------+
- *       |   addr  |   off   |         4+4 bytes
- *  +0c  +---------+---------+
- *       |   addr  |   off   |         4+4 bytes
- *  +14  +---------+---------+
- *       |   addr  |   off   |         4+4 bytes
- *       +---------+---------+
- *      ... `count` entries ...
- *       +-------------------+
- *       |  null separated   |
- *       |    name vector    |
- *       +-------------------+
- */
-
-const HEADER_SIZE: usize = 4;
-
-#[derive(Clone, Copy)]
-struct KAllSymsHeader {
-    count: u32,
-}
-
-#[derive(Clone, Copy)]
-struct SymbolEntry {
-    addr: u32,
-    name_off: u32,
-}
-
 struct KAllSyms {
     base: usize,
     count: usize,
+    addr_table_off: usize,
+    name_table_off: usize,
+    token_table_off: usize,
 }
 
 #[derive(Clone, Copy)]
-pub struct Symbol {
-    pub addr: usize,
-    name_addr: usize,
-    name_len: usize,
-}
-
-impl Symbol {
-    fn new(entry_ptr: *const SymbolEntry) -> Symbol {
-        let entry = unsafe { *entry_ptr };
-
-        let name_addr = entry_ptr as usize + entry.name_off as usize;
-        let ptr = name_addr as *const u8;
-        let mut name_len: usize = 0;
-        loop {
-            if unsafe { *ptr.add(name_len) } == 0 {
-                break;
-            }
-            name_len += 1;
-        };
-
-        Symbol {
-            addr: entry.addr as usize,
-            name_addr,
-            name_len,
-        }
-    }
-
-    pub fn name(&self) -> &str {
-        let name = unsafe {
-            core::slice::from_raw_parts(
-                self.name_addr as *const u8,
-                self.name_len
-            )
-        };
-        core::str::from_utf8(name).unwrap()
-    }
-}
-
-struct SymbolIterator {
-    ptr: *const SymbolEntry,
-    end: *const SymbolEntry,
-}
-
-impl Iterator for SymbolIterator {
-    type Item = Symbol;
-
-    fn next(&mut self) -> Option<Symbol> {
-        let curr = self.ptr;
-        if unsafe { curr.offset_from(self.end) } >= 0 {
-            None
-        } else {
-            self.ptr = unsafe { curr.add(1) };
-            Some(Symbol::new(curr))
-        }
-    }
+struct KAllSymsHeader {
+    _reserved: u32,
+    count: u16,
+    addr_table_off: u16,
+    name_table_off: u16,
+    token_table_off: u16,
 }
 
 impl KAllSyms {
-    fn new() -> KAllSyms {
+    fn new() -> Self {
         extern "C" {
             static __kallsyms: u8;
         }
         let base = unsafe { &__kallsyms as *const _ as usize };
         let header = unsafe { *(base as *const KAllSymsHeader) };
-        KAllSyms {
+        Self {
             base,
             count: header.count as usize,
+            addr_table_off: header.addr_table_off as usize,
+            name_table_off: header.name_table_off as usize,
+            token_table_off: header.token_table_off as usize,
         }
     }
 
-    fn nth_entry(&self, i: usize) -> *const SymbolEntry {
-        let top = self.base + HEADER_SIZE;
-        let ptr = top as *const SymbolEntry;
-        unsafe { ptr.add(i) }
-    }
-
     fn nth_addr(&self, i: usize) -> usize {
-        let sym = self.nth_entry(i);
-        unsafe { (*sym).addr as usize }
+        use core::mem;
+        let addr = self.base +
+            self.addr_table_off +
+            ((mem::size_of::<u32>()) * i);
+        let entry = addr as *const u32;
+        unsafe { *entry as usize }
     }
 
-    fn nth(&self, i: usize) -> Symbol {
-        Symbol::new(self.nth_entry(i))
+    fn get_u8_array(&self, table_off: usize, i: usize) -> &'static [u8] {
+        use core::mem;
+        let addr_table = self.base + table_off;
+        let addr_off = addr_table + ((mem::size_of::<u16>()) * i);
+        let off = addr_table + unsafe { *(addr_off as *const u16) as usize };
+        let ptr = off as *const u8;
+        unsafe {
+            core::slice::from_raw_parts(
+                ptr.add(1),
+                *ptr as usize
+            )
+        }
     }
 
-    fn iter(&self) -> SymbolIterator {
-        let ptr = self.nth_entry(0);
-        let end = self.nth_entry(self.count);
-        SymbolIterator { ptr, end }
+    fn nth_token(&self, i: u8) -> &'static [u8] {
+        return self.get_u8_array(
+            self.token_table_off, i as usize);
     }
 
-    fn search(&self, addr: usize) -> Option<Symbol> {
+    fn nth_name<'a>(&self, i: usize, buf: &'a mut [u8]) -> &'a str {
+        let tokens = self.get_u8_array(
+            self.name_table_off, i);
+        let mut buf_i: usize = 0;
+        for tok_i in tokens {
+            let token = self.nth_token(*tok_i);
+            buf[buf_i..(buf_i + token.len())].copy_from_slice(token);
+            buf_i += token.len();
+        }
+        core::str::from_utf8(&buf[..buf_i]).unwrap()
+    }
+
+    fn search<'a>(&self, addr: usize, buf: &'a mut [u8]) -> Option<(&'a str, usize)> {
         if self.count == 0 {
             return None
         }
@@ -133,8 +79,8 @@ impl KAllSyms {
             return None
         }
 
-        let mut left = 0;
-        let mut right = self.count;
+        let mut left: usize = 0;
+        let mut right: usize = self.count - 1;
 
         let idx = loop {
             if right - left < 2 {
@@ -154,18 +100,11 @@ impl KAllSyms {
             }
         };
 
-        Some(self.nth(idx))
+        let faddr = self.nth_addr(idx);
+        Some((self.nth_name(idx, buf), addr - faddr))
     }
 }
 
-#[allow(dead_code)]
-pub fn walk(func: fn(usize, &str)) {
-    let kallsyms = KAllSyms::new();
-    for sym in kallsyms.iter() {
-        func(sym.addr, sym.name())
-    }
-}
-
-pub fn search(addr: usize) -> Option<Symbol> {
-    KAllSyms::new().search(addr)
+pub fn search<'a>(addr: usize, buf: &'a mut [u8]) -> Option<(&'a str, usize)> {
+    KAllSyms::new().search(addr, buf)
 }

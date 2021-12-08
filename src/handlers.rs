@@ -173,9 +173,10 @@ unsafe extern "C" fn __unhandled_exception(regs_addr: usize) {
         10,
         |addr: usize| {
             use crate::kallsyms;
-            match kallsyms::search(addr) {
-                Some(sym) => println!("  {:08x}  {} +{:#x}", addr, sym.name(), addr - sym.addr),
-                None      => println!("  {:08x}", addr)
+            let mut buf: [u8; 128] = [0; 128];
+            match kallsyms::search(addr, &mut buf) {
+                Some((name, off)) => println!("  {:08x}  {} +{:#x}", addr, name, off),
+                None              => println!("  {:08x}", addr)
             }
         }
     );
