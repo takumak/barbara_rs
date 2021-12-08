@@ -59,7 +59,7 @@ impl KAllSyms {
             self.token_table_off, i as usize);
     }
 
-    fn nth_name<'a>(&self, i: usize, buf: &'a mut [u8]) -> &'a str {
+    fn safe_nth_name<'a>(&self, i: usize, buf: &'a mut [u8]) -> &'a str {
         let tokens = self.get_u8_array(
             self.name_table_off, i);
         let mut buf_i: usize = 0;
@@ -76,7 +76,7 @@ impl KAllSyms {
         core::str::from_utf8(&buf[..buf_i]).unwrap()
     }
 
-    fn search<'a>(&self, addr: usize, buf: &'a mut [u8]) -> Option<(&'a str, usize)> {
+    fn search_idx(&self, addr: usize) -> Option<usize> {
         if self.count == 0 {
             return None
         }
@@ -105,11 +105,21 @@ impl KAllSyms {
             }
         };
 
-        let faddr = self.nth_addr(idx);
-        Some((self.nth_name(idx, buf), addr - faddr))
+        Some(idx)
+    }
+
+    fn safe_search<'a>(&self, addr: usize, buf: &'a mut [u8]) -> Option<(&'a str, usize)> {
+        match self.search_idx(addr) {
+            None => None,
+            Some(idx) => {
+                let name = self.safe_nth_name(idx, buf);
+                let off = addr - self.nth_addr(idx);
+                Some((name, off))
+            }
+        }
     }
 }
 
-pub fn search<'a>(addr: usize, buf: &'a mut [u8]) -> Option<(&'a str, usize)> {
-    KAllSyms::new().search(addr, buf)
+pub fn safe_search<'a>(addr: usize, buf: &'a mut [u8]) -> Option<(&'a str, usize)> {
+    KAllSyms::new().safe_search(addr, buf)
 }
