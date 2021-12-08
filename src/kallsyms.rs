@@ -7,6 +7,7 @@ struct KAllSyms {
 }
 
 #[derive(Clone, Copy)]
+#[repr(C)]
 struct KAllSymsHeader {
     _reserved: u32,
     count: u16,
