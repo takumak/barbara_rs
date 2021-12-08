@@ -48,10 +48,10 @@ pub fn unwind_walk(pc: usize, fp: usize, limit: u32, func: fn(usize)) {
 
 #[allow(dead_code)]
 pub fn trace(limit: u32, func: fn(usize)) {
-    unsafe {
+    let frame: StackFrame = unsafe {
         let fp: usize;
         asm!("mov {}, r7", out(reg) fp);
-        let ref frame: StackFrame = *(fp as *const StackFrame);
-        unwind_walk(frame.lr, frame.fp, limit, func);
-    }
+        *(fp as *const StackFrame)
+    };
+    unwind_walk(frame.lr, frame.fp, limit, func);
 }
