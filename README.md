@@ -3,6 +3,9 @@
 ## How to run
 
 ```
+$ rustup override set nightly
+$ rustup target add thumbv8m.main-none-eabi
+$ rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
 $ cargo run
     Finished dev [unoptimized + debuginfo] target(s) in 0.03s
      Running `qemu-system-arm -M mps2-an521 -semihosting -serial stdio -display none -kernel target/thumbv8m.main-none-eabi/debug/mps2_an521_rs`
