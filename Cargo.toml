@@ -5,6 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies]
+linked_list_allocator = { path = "libs/linked_list_allocator" }
+
 [dependencies.tock-registers]
 git = "https://github.com/tock/tock"
 rev = "b8f5da9c09373a5bbf48e70e9cef16d669f3cdde"
@@ -16,4 +19,4 @@ panic = "abort"
 panic = "abort"
 
 [workspace]
-members = ["xtask"]
+members = ["xtask", "libs/linked_list_allocator"]

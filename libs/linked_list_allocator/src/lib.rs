@@ -1,25 +1,15 @@
+#![cfg_attr(not(test), no_std)]
+
 use core::ptr;
 use core::alloc::GlobalAlloc;
 extern crate alloc;
 use alloc::alloc::Layout;
-
-use crate::decl_c_symbol_addr;
-decl_c_symbol_addr!(__heap_s, heap_s);
-decl_c_symbol_addr!(__heap_e, heap_e);
 
 const MIN_SIZE: usize = 32 << 10;
 
 const fn align_up(alignment: usize, value: usize) -> usize {
     if value % alignment != 0 {
         value + alignment - (value % alignment)
-    } else {
-        value
-    }
-}
-
-const fn align_down(alignment: usize, value: usize) -> usize {
-    if value % alignment != 0 {
-        value - (value % alignment)
     } else {
         value
     }
@@ -171,11 +161,8 @@ impl LinkedListAllocator {
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn init(&mut self, mem_top: usize, mem_end: usize) {
         use core::mem::size_of;
-
-        let mem_top = align_up(4, heap_s());
-        let mem_end = align_down(4, heap_e());
 
         if mem_end - mem_top < MIN_SIZE {
             panic!("Heap area too small: given={:#08x}, required={:#08x}",
@@ -208,19 +195,15 @@ impl LinkedListAllocator {
             )
         }
     }
-}
 
-unsafe impl Sync for LinkedListAllocator {}
-
-unsafe impl GlobalAlloc for LinkedListAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+    unsafe fn __alloc(&self, size: usize) -> *mut u8 {
         if !self.initialized {
             panic!("Heap used before initialize allocator");
         }
 
         let mut smallest: Option<&mut Area> = None;
         for area in self.free.iter_mut() {
-            if area.size < layout.size() {
+            if area.size < size {
                 continue;
             }
 
@@ -240,14 +223,14 @@ unsafe impl GlobalAlloc for LinkedListAllocator {
             None => ptr::null_mut(),
             Some(area) => {
                 let ret = area.addr as *mut u8;
-                area.size -= layout.size();
-                area.addr += layout.size();
+                area.size -= size;
+                area.addr += size;
                 ret
             }
         }
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+    unsafe fn __dealloc(&self, ptr: *mut u8, size: usize) {
         if !self.initialized {
             panic!("Heap used before initialize allocator");
         }
@@ -258,7 +241,7 @@ unsafe impl GlobalAlloc for LinkedListAllocator {
         };
 
         new_area.addr = ptr as usize;
-        new_area.size = layout.size();
+        new_area.size = size;
 
         let mut left: Option<&mut Area> = None;
         let mut right: Option<&mut Area> = None;
@@ -267,7 +250,7 @@ unsafe impl GlobalAlloc for LinkedListAllocator {
             if let Some((addr, size)) = new_area.is_overwrapping(area) {
                 panic!(
                     "Double free detected: req={:08x}+{:x}, double free={:08x}+{:x}",
-                    ptr as usize, layout.size(),
+                    ptr as usize, size,
                     addr, size
                 )
             }
@@ -281,17 +264,17 @@ unsafe impl GlobalAlloc for LinkedListAllocator {
         if left.is_some() && right.is_some() {
             let left = left.unwrap();
             let right = right.unwrap();
-            left.size += layout.size() + right.size;
+            left.size += size + right.size;
             self.unused.append(new_area);
             self.unused.append(right);
         } else if left.is_some() {
             let left = left.unwrap();
-            left.size += layout.size();
+            left.size += size;
             self.unused.append(new_area);
         } else if right.is_some() {
             let right = left.unwrap();
-            right.addr -= layout.size();
-            right.size += layout.size();
+            right.addr -= size;
+            right.size += size;
             self.unused.append(new_area);
         } else {
             self.free.append(new_area);
@@ -299,7 +282,14 @@ unsafe impl GlobalAlloc for LinkedListAllocator {
     }
 }
 
-#[alloc_error_handler]
-fn alloc_error(_: Layout) -> ! {
-    panic!("OOM error");
+unsafe impl Sync for LinkedListAllocator {}
+
+unsafe impl GlobalAlloc for LinkedListAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        self.__alloc(layout.size())
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        self.__dealloc(ptr, layout.size())
+    }
 }

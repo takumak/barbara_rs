@@ -7,22 +7,18 @@
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 
+extern crate alloc;
+
 mod handlers;
 mod backtrace;
 mod semihosting;
 mod console;
 mod arm_uart;
 mod kallsyms;
-mod listallocator;
+mod heap;
 
 use arm_uart::ArmUart;
 const __CONSOLE: *mut ArmUart = 0x4020_0000 as *mut ArmUart;
-
-extern crate alloc;
-
-use listallocator::LinkedListAllocator;
-#[global_allocator]
-static mut HEAP: LinkedListAllocator = LinkedListAllocator::new();
 
 pub fn main() -> ! {
     console::init();
@@ -30,7 +26,7 @@ pub fn main() -> ! {
     println!("  mps2-an521 'Hello world' DEMO in Rust  ");
     println!("=========================================");
 
-    unsafe { HEAP.init() };
+    heap::init();
 
     use alloc::vec::Vec;
     let mut v = Vec::new();
