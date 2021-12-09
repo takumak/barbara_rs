@@ -24,6 +24,9 @@ decl_c_symbol_addr!(__rodata_s, rodata_s);
 
 #[no_mangle]
 unsafe extern "C" fn __reset() {
+    // disable interrupt
+    asm!("cpsid i");
+
     let size = bss_e() - bss_s();
     ptr::write_bytes(bss_s() as *mut u8, 0, size);
 
@@ -32,9 +35,6 @@ unsafe extern "C" fn __reset() {
         rodata_s() as *const u8,
         data_s() as *mut u8,
         size);
-
-    // disable interrupt
-    asm!("cpsid i");
 
     use crate::main;
     main()
