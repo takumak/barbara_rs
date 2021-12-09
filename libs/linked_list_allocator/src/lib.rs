@@ -286,10 +286,10 @@ unsafe impl Sync for LinkedListAllocator {}
 
 unsafe impl GlobalAlloc for LinkedListAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.__alloc(layout.size())
+        self.__alloc(align_up(layout.align(), layout.size()))
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        self.__dealloc(ptr, layout.size())
+        self.__dealloc(ptr, align_up(layout.align(), layout.size()))
     }
 }
