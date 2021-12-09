@@ -4,6 +4,7 @@
 #![feature(global_asm)]
 #![feature(naked_functions)]
 #![feature(linkage)]
+#![feature(panic_info_message)]
 
 mod handlers;
 mod backtrace;

@@ -41,7 +41,19 @@ unsafe extern "C" fn __reset() {
 }
 
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(panic_info: &PanicInfo) -> ! {
+    use crate::println;
+    if let Some(message) = panic_info.message() {
+        println!("{}", *message);
+    }
+    if let Some(location) = panic_info.location() {
+        println!(
+            "location: {}:{}",
+            location.file(),
+            location.line(),
+        );
+    }
+
     unsafe { asm!("bkpt 0x80") }
     loop {};
 }
