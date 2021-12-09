@@ -61,13 +61,14 @@ impl KAllSyms {
     }
 
     fn safe_nth_name<'a>(&self, i: usize, buf: &'a mut [u8]) -> &'a str {
+        use core::cmp::min;
+
         let tokens = self.get_u8_array(
             self.name_table_off, i);
         let mut buf_i: usize = 0;
         for tok_i in tokens {
-            use core::cmp;
             let token = self.nth_token(*tok_i);
-            let wlen = cmp::min(buf.len() - buf_i, token.len());
+            let wlen = min(buf.len() - buf_i, token.len());
             buf[buf_i..(buf_i + wlen)].copy_from_slice(&token[..wlen]);
             buf_i += token.len();
             if buf_i >= buf.len() {
