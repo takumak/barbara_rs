@@ -9,9 +9,6 @@ edition = "2021"
 git = "https://github.com/tock/tock"
 rev = "b8f5da9c09373a5bbf48e70e9cef16d669f3cdde"
 
-[build-dependencies]
-cc = "1.0"
-
 [profile.dev]
 panic = "abort" # disable stack unwinding on panic
 
