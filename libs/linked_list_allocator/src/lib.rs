@@ -272,7 +272,7 @@ impl LinkedListAllocator {
             left.size += size;
             self.unused.append(new_area);
         } else if right.is_some() {
-            let right = left.unwrap();
+            let right = right.unwrap();
             right.addr -= size;
             right.size += size;
             self.unused.append(new_area);
