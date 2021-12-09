@@ -4,6 +4,7 @@
 #![feature(global_asm)]
 #![feature(naked_functions)]
 #![feature(linkage)]
+#![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 
 mod handlers;
@@ -12,15 +13,34 @@ mod semihosting;
 mod console;
 mod arm_uart;
 mod kallsyms;
+mod listallocator;
 
 use arm_uart::ArmUart;
 const __CONSOLE: *mut ArmUart = 0x4020_0000 as *mut ArmUart;
+
+extern crate alloc;
+
+use listallocator::LinkedListAllocator;
+#[global_allocator]
+static mut HEAP: LinkedListAllocator = LinkedListAllocator::new();
 
 pub fn main() -> ! {
     console::init();
     println!("=========================================");
     println!("  mps2-an521 'Hello world' DEMO in Rust  ");
     println!("=========================================");
+
+    unsafe { HEAP.init() };
+
+    use alloc::vec::Vec;
+    let mut v = Vec::new();
+    for i in 0..10 {
+        v.push(i);
+    }
+    println!("vector: {:?}", v);
+
+    println!();
+    println!("make panic");
 
     unsafe {
         asm!(

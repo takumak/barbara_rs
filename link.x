@@ -4,6 +4,7 @@ MEMORY
     ROM      : ORIGIN = 0x38000000, LENGTH = 256K
     RAM      : ORIGIN = 0x38040000, LENGTH = 64K
     STACK    : ORIGIN = 0x38050000, LENGTH = 64K
+    HEAP     : ORIGIN = 0x38060000, LENGTH = 64K
 }
 
 SECTIONS
@@ -54,6 +55,13 @@ SECTIONS
         . += LENGTH(STACK);
         __stack_e = .;
     } > STACK
+
+    .heap ORIGIN(HEAP) :
+    {
+        __heap_s = .;
+        . += LENGTH(HEAP);
+        __heap_e = .;
+    } > HEAP
 
     /DISCARD/ :
     {
