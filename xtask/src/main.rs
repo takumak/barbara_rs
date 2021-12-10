@@ -12,13 +12,22 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Run { },
-    Build { },
+    Run {
+        #[clap(last = true)]
+        args: Vec<String>,
+    },
+    Build {
+        #[clap(last = true)]
+        args: Vec<String>,
+    },
 }
 
-fn cargo(cmd: &str) {
+fn cargo_target(cmd: &str, args: &Vec<String>) {
+    let mut args_all = vec![cmd, "--target", "thumbv8m.main-none-eabi"];
+    args_all.extend(args.iter().map(|s| &**s));
+
     let mut cargo = process::Command::new("cargo");
-    cargo.args(&[cmd, "--target", "thumbv8m.main-none-eabi"]);
+    cargo.args(args_all);
     cargo.env("RUSTFLAGS", "-C link-arg=-Tlink.x -C force-frame-pointers=y");
 
     let status = cargo.status().unwrap();
@@ -29,11 +38,11 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Some(Commands::Run { }) => {
-            cargo("run")
+        Some(Commands::Run { args }) => {
+            cargo_target("run", args)
         }
-        Some(Commands::Build { }) => {
-            cargo("build")
+        Some(Commands::Build { args }) => {
+            cargo_target("build", args)
         }
         None => {}
     }
