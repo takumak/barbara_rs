@@ -20,6 +20,10 @@ enum Commands {
         #[clap(last = true)]
         args: Vec<String>,
     },
+    Test {
+        #[clap(last = true)]
+        args: Vec<String>,
+    },
 }
 
 fn cargo_target(cmd: &str, args: &Vec<String>) {
@@ -34,6 +38,18 @@ fn cargo_target(cmd: &str, args: &Vec<String>) {
     assert!(status.success(), "failed to execute: {:?}", cargo);
 }
 
+fn cargo_test(args: &Vec<String>) {
+    let mut args_all = vec!["test", "-p", "linked_list_allocator"];
+    args_all.extend(args.iter().map(|s| &**s));
+
+    let mut cargo = process::Command::new("cargo");
+    cargo.args(args_all);
+    cargo.env("RUST_BACKTRACE", "1");
+
+    let status = cargo.status().unwrap();
+    assert!(status.success(), "failed to execute: {:?}", cargo);
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -43,6 +59,9 @@ fn main() {
         }
         Some(Commands::Build { args }) => {
             cargo_target("build", args)
+        }
+        Some(Commands::Test { args }) => {
+            cargo_test(args)
         }
         None => {}
     }
