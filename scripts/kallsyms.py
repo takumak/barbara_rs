@@ -182,8 +182,8 @@ def symbol_table_bin(table):
     #   };
     #
     #   struct name_entry {
-    #     uint8_t token_count;
-    #     uint8_t tokens[token_count];
+    #     uint8_t length;
+    #     uint8_t tokens[length];
     #   };
     #
     #   struct token_table {
@@ -192,7 +192,7 @@ def symbol_table_bin(table):
     #
     #   struct token_entry {
     #     uint8_t length;
-    #     uint8_t name[];
+    #     uint8_t name[length];
     #   };
 
     tok_dic, symbols = compress([s for a, s in table])
