@@ -120,3 +120,140 @@ impl KAllSyms {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    struct TokenTable {
+        tokens: Vec<Vec<u8>>,
+    }
+
+    impl TokenTable {
+        fn new(tokens: &[&str]) -> Self {
+            let mut tokens_vec: Vec<Vec<u8>> = Vec::new();
+            for tok in tokens {
+                tokens_vec.push(tok.as_bytes().to_vec());
+            }
+            tokens_vec.extend(
+                std::iter::repeat(Vec::new())
+                    .take(256 - tokens_vec.len()));
+            Self { tokens: tokens_vec }
+        }
+
+        fn find(&self, token: &str) -> Option<u8> {
+            let token = token.as_bytes().to_vec();
+            match self.tokens.iter().position(|t| *t == token) {
+                None => None,
+                Some(pos) => Some(pos as u8),
+            }
+        }
+    }
+
+    fn make_u8array_table(rows: &Vec<Vec<u8>>) -> Vec<u8> {
+        let mut index: Vec<u16> = vec![];
+        let mut body: Vec<u8> = vec![];
+        for row in rows {
+            index.push(body.len() as u16);
+            body.push(row.len() as u8);
+            body.extend(row.iter());
+        }
+
+        let mut table: Vec<u8> = vec![];
+        let index_size = (index.len() * 2) as u16;
+        for off in index {
+            let off = index_size + off;
+            table.extend(off.to_le_bytes());
+        }
+        table.append(&mut body);
+
+        table
+    }
+
+    fn make_name_table(token_table: &TokenTable, names: &[&[&str]]) -> Vec<Vec<u8>> {
+        let mut names_vec: Vec<Vec<u8>> = Vec::new();
+        for tokens in names {
+            let mut tokens_vec: Vec<u8> = Vec::new();
+            tokens_vec.extend(tokens.iter().map(|t| {
+                match token_table.find(t) {
+                    None => panic!("Token not found: {}", t),
+                    Some(i) => i,
+                }
+            }));
+            names_vec.push(tokens_vec);
+        }
+        names_vec
+    }
+
+    fn make_kallsyms_data(tokens: &[&str], symbols: &[(u32, &[&str])]) -> Vec<u8> {
+        let token_table = TokenTable::new(tokens);
+        let names: Vec<&[&str]> = symbols.iter().map(|(_, tokens)| *tokens).collect();
+        let name_table = make_name_table(&token_table, names.as_slice());
+
+        let mut name_table_bin = make_u8array_table(&name_table);
+        let mut token_table_bin = make_u8array_table(&token_table.tokens);
+
+        let _reserved: u32 = 0;
+        let count: u16 = symbols.len() as u16;
+        let addr_table_off: u16 = 12;
+        let name_table_off: u16 = addr_table_off + (4 * count);
+        let token_table_off: u16 = name_table_off + (name_table_bin.len() as u16);
+
+        let mut result: Vec<u8> = Vec::new();
+        result.extend(_reserved.to_le_bytes());
+        result.extend(count.to_le_bytes());
+        result.extend(addr_table_off.to_le_bytes());
+        result.extend(name_table_off.to_le_bytes());
+        result.extend(token_table_off.to_le_bytes());
+        for (addr, _) in symbols {
+            result.extend(addr.to_le_bytes());
+        }
+        result.append(&mut name_table_bin);
+        result.append(&mut token_table_bin);
+
+        result
+    }
+
+    #[test]
+    fn normal1() {
+        let data = make_kallsyms_data(
+            &[
+                "t", "es", "t_f", "unction", "1",
+                "test_function2",
+                "test_f", "3",
+            ],
+            &[
+                (0x1000, &["test_f", "unction", "3"]),
+                (0x2000, &["test_function2"]),
+                (0x3000, &["t", "es", "t_f", "unction", "1"]),
+            ]
+        );
+
+        let kallsyms = crate::KAllSyms::new(data.as_ptr() as usize);
+        let mut namebuf: [u8; 64] = [0; 64];
+
+        assert_eq!(kallsyms.safe_search(0x0fff, &mut namebuf),
+                   None);
+
+        assert_eq!(kallsyms.safe_search(0x1000, &mut namebuf),
+                   Some(("test_function3", 0usize)));
+
+        assert_eq!(kallsyms.safe_search(0x1fff, &mut namebuf),
+                   Some(("test_function3", 0xfffusize)));
+
+        assert_eq!(kallsyms.safe_search(0x2000, &mut namebuf),
+                   Some(("test_function2", 0usize)));
+
+        assert_eq!(kallsyms.safe_search(0x10000, &mut namebuf),
+                   Some(("test_function1", 0xd000usize)));
+    }
+
+    #[test]
+    fn empty() {
+        let data: [u8; 12] = [0; 12];
+
+        let kallsyms = crate::KAllSyms::new(data.as_ptr() as usize);
+        let mut namebuf: [u8; 64] = [0; 64];
+
+        assert_eq!(kallsyms.safe_search(0x1000, &mut namebuf),
+                   None);
+    }
+}
