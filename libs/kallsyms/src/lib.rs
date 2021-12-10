@@ -1,4 +1,6 @@
-struct KAllSyms {
+#![cfg_attr(not(test), no_std)]
+
+pub struct KAllSyms {
     base: usize,
     count: usize,
     addr_table_off: usize,
@@ -17,12 +19,8 @@ struct KAllSymsHeader {
 }
 
 impl KAllSyms {
-    fn new() -> Self {
-        extern "C" {
-            static __kallsyms: u8;
-        }
-        let base = unsafe { &__kallsyms as *const _ as usize };
-        let header = unsafe { *(base as *const KAllSymsHeader) };
+    pub const fn new(base: usize) -> Self {
+        let header = unsafe { &*(base as *const KAllSymsHeader) };
         Self {
             base,
             count: header.count as usize,
@@ -110,7 +108,8 @@ impl KAllSyms {
         Some(idx)
     }
 
-    fn safe_search<'a>(&self, addr: usize, buf: &'a mut [u8]) -> Option<(&'a str, usize)> {
+    pub fn safe_search<'a>(&self, addr: usize, buf: &'a mut [u8])
+                           -> Option<(&'a str, usize)> {
         match self.search_idx(addr) {
             None => None,
             Some(idx) => {
@@ -120,8 +119,4 @@ impl KAllSyms {
             }
         }
     }
-}
-
-pub fn safe_search<'a>(addr: usize, buf: &'a mut [u8]) -> Option<(&'a str, usize)> {
-    KAllSyms::new().safe_search(addr, buf)
 }
