@@ -43,6 +43,7 @@ fn cargo_testall(args: &Vec<String>) {
         "test",
         "-p", "kallsyms",
         "-p", "linked_list_allocator",
+        "--tests",
     ];
     args_all.extend(args.iter().map(|s| &**s));
 
