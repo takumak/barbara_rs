@@ -264,7 +264,7 @@ def ldscript(table, out):
     print(dedent('''
     SECTIONS {
         .kallsyms : {
-            . = __kallsyms_dummy + 4;
+            . = __kallsyms_dummy + 12;
             . = ALIGN(4);
             __kallsyms = .;
     '''), file=out)

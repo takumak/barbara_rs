@@ -31,7 +31,9 @@ SECTIONS
 
         . = ALIGN(4);
         __kallsyms_dummy = .;
-        LONG(0); /* item count = 0 */
+        LONG(0);
+        LONG(0);
+        LONG(0);
     } > ROM
 
     .ram ORIGIN(RAM) :
