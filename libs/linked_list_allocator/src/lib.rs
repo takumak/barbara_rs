@@ -2,8 +2,8 @@
 
 use core::{
     alloc::GlobalAlloc,
-    cmp::max,
-    mem::align_of,
+    cell::UnsafeCell,
+    mem::{align_of, size_of},
     ptr,
 };
 extern crate alloc;
@@ -32,7 +32,8 @@ struct Area {
 
 impl Area {
     const fn size_align() -> usize {
-        let header_size = align_of::<Self>() as usize;
+        let header_size = align_up(align_of::<Self>(),
+                                   size_of::<Self>());
         let p2 = 1 << (usize::BITS - header_size.leading_zeros() - 1);
         if p2 < header_size {
             p2 << 1
@@ -41,99 +42,48 @@ impl Area {
         }
     }
 
-    const fn min_size() -> usize {
-        Self::size_align() << 1
-    }
-
-    fn bottom(&self) -> usize {
-        self.body_addr() + self.size
-    }
-
-    fn set_bottom(&mut self, bottom: usize) {
-        assert!(bottom > self.body_addr());
-        self.size = bottom - self.body_addr();
-    }
-
     fn addr(&self) -> usize {
         self as *const _ as usize
     }
 
-    fn body_addr(&self) -> usize {
-        self.addr() + align_of::<Self>()
+    fn bottom(&self) -> usize {
+        self.addr() + self.size
     }
 
-    fn next(&self) -> Option<&'static mut Area> {
-        if self.next.is_null() {
-            None
-        } else {
-            Some(unsafe { &mut *self.next })
-        }
-    }
-
-    fn next_addr(&self) -> usize {
-        self.next as usize
-    }
-
-    fn try_union_next(&mut self) {
-        if self.bottom() == self.next_addr() {
-            let next = self.next().unwrap();
-            self.set_bottom(next.bottom());
-            self.next = next.next;
-        }
-    }
-
-    fn alloc(&mut self, size: usize) -> *mut u8 {
-        assert!(size <= self.size);
-        assert!(size >= Self::min_size());
-        assert!(size % Self::size_align() == 0);
-        self.size -= size;
-        self.bottom() as *mut u8
-    }
-
-    fn dealloc(&mut self, ptr: *mut u8, size: usize) {
-        assert!(size >= Self::min_size());
-        assert!(size % Self::size_align() == 0);
-
-        let addr = ptr as usize;
-        assert!(addr >= self.bottom());
-        if !self.next.is_null() {
-            assert!(addr + size <= self.next_addr());
-        }
-
-        if addr == self.bottom() {
-            self.size += size;
-            self.try_union_next();
-        } else {
-            let next_next_ptr = self.next;
-            let next = unsafe { &mut *(addr as *mut Area) };
-            next.set_bottom(addr + size);
-            next.next = next_next_ptr;
-            next.try_union_next();
-            self.next = next;
-        }
+    fn set_bottom(&mut self, bottom: usize) {
+        assert!(bottom > self.addr());
+        self.size = bottom - self.addr();
     }
 }
 
 struct AreaIterator {
     curr: *mut Area,
+    prev: *mut Area,
 }
 
 impl AreaIterator {
-    fn new(head: &'static mut Area) -> Self {
-        Self { curr: head }
+    fn new(head: *mut Area) -> Self {
+        Self { curr: head, prev: ptr::null_mut() }
     }
 }
 
 impl Iterator for AreaIterator {
-    type Item = &'static mut Area;
+    type Item = (&'static mut Area, Option<&'static mut Area>);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.curr.is_null() {
             None
         } else {
-            let area = unsafe { &mut *self.curr };
-            self.curr = area.next;
-            Some(area)
+            let curr = unsafe { &mut *self.curr };
+            let prev =
+                if self.prev.is_null() {
+                    None
+                } else {
+                    Some(unsafe { &mut *self.prev })
+                };
+            self.curr = curr.next;
+            self.prev = curr;
+            Some((curr, prev))
         }
     }
 }
@@ -147,43 +97,45 @@ impl AreaList {
         AreaList { head: ptr::null_mut() }
     }
 
-    fn set_head(&mut self, addr: usize, size: usize) {
+    fn init(&mut self, addr: usize, size: usize) {
         self.head = addr as *mut Area;
         let head = unsafe { &mut *self.head };
-        head.size = size - align_of::<Self>();
+        head.size = size;
         head.next = ptr::null_mut();
     }
 
-    fn iter_mut(&self) -> AreaIterator {
-        AreaIterator::new(unsafe { &mut *self.head })
+    fn iter_with_prev(&self) -> AreaIterator {
+        AreaIterator::new(self.head)
     }
 }
 
 pub struct LinkedListAllocator {
     initialized: bool,
-    free_areas: AreaList,
-    bottom: usize,
+    free_areas: UnsafeCell<AreaList>,
+    mem_top: usize,
+    mem_end: usize,
 }
 
 impl LinkedListAllocator {
     pub const fn new() -> Self {
         LinkedListAllocator {
             initialized: false,
-            free_areas: AreaList::new(),
-            bottom: 0,
+            free_areas: UnsafeCell::new(AreaList::new()),
+            mem_top: 0,
+            mem_end: 0,
         }
     }
 
-    pub fn init(&mut self, mem_top: usize, mem_bottom: usize) {
+    pub fn init(&mut self, mem_top: usize, mem_end: usize) {
         let mem_top = align_up(Area::size_align(), mem_top);
-        let mem_bottom = align_down(Area::size_align(), mem_bottom);
+        let mem_end = align_down(Area::size_align(), mem_end);
 
-        if mem_bottom <= mem_top {
+        if mem_end <= mem_top {
             panic!("Invalid heap area: top={:p} >= bottom={:p}",
-                   mem_top as *const u8, mem_bottom as *const u8);
+                   mem_top as *const u8, mem_end as *const u8);
         }
 
-        let mem_size = mem_bottom - mem_top;
+        let mem_size = mem_end - mem_top;
 
         let min_size = Area::size_align() * 100;
         if mem_size < min_size {
@@ -192,17 +144,9 @@ impl LinkedListAllocator {
         }
 
         self.initialized = true;
-        self.free_areas.set_head(mem_top, mem_size);
-        self.bottom = mem_bottom;
-    }
-
-    #[cfg(test)]
-    fn total_free(&self) -> usize {
-        let mut size: usize = 0;
-        for area in self.free_areas.iter_mut() {
-            size += area.size;
-        }
-        size
+        self.free_areas.get_mut().init(mem_top, mem_size);
+        self.mem_top = mem_top;
+        self.mem_end = mem_end;
     }
 
     unsafe fn __alloc(&self, size: usize) -> *mut u8 {
@@ -210,34 +154,49 @@ impl LinkedListAllocator {
             panic!("Heap used before initialize allocator");
         }
 
-        let size = max(
-            Area::min_size(),
-            align_up(Area::size_align(), size));
+        let size = align_up(Area::size_align(), size);
 
-        let mut smallest: Option<&mut Area> = None;
-        for area in self.free_areas.iter_mut() {
-            if area.size < size {
+        let list = &mut *self.free_areas.get();
+
+        let mut target: Option<&'static mut Area> = None;
+        let mut target_size: usize = 0;
+        let mut target_prev: Option<&'static mut Area> = None;
+        for (area, prev) in list.iter_with_prev() {
+            let area_size = area.size;
+            if area_size < size {
                 continue;
             }
 
-            smallest = match smallest {
-                None => Some(area),
-                Some(s) => {
-                    if area.size < s.size {
-                        Some(area)
-                    } else {
-                        Some(s)
-                    }
-                }
-            };
-        }
-
-        match smallest {
-            None => ptr::null_mut(),
-            Some(area) => {
-                area.alloc(size)
+            if target.is_none() || area_size < target_size {
+                target_size = area_size;
+                target = Some(area);
+                target_prev = prev;
             }
         }
+
+        if target.is_none() {
+            return ptr::null_mut();
+        }
+
+        let target = target.unwrap();
+        let result = target.addr() as *mut u8;
+        let prev_next: *mut Area =
+            if size == target_size {
+                target.next
+            } else {
+                let next = &mut *((target.addr() + size) as *mut Area);
+                next.set_bottom(target.bottom());
+                next.next = target.next;
+                next
+            };
+
+        if target_prev.is_none() {
+            list.head = prev_next;
+        } else {
+            target_prev.unwrap().next = prev_next;
+        }
+
+        result
     }
 
     unsafe fn __dealloc(&self, ptr: *mut u8, size: usize) {
@@ -246,25 +205,50 @@ impl LinkedListAllocator {
         }
 
         let addr = ptr as usize;
-        let size = max(
-            Area::min_size(),
-            align_up(Area::size_align(), size));
+        let size = align_up(Area::size_align(), size);
 
-        assert!(addr + size <= self.bottom);
+        assert!(addr >= self.mem_top);
+        assert!(addr + size <= self.mem_end);
 
-        let mut area: Option<&mut Area> = None;
-        for a in self.free_areas.iter_mut() {
-            let a_addr = a.addr();
-            if a_addr > addr {
-                break;
-            }
-            area = Some(a);
+        let mut area = &mut *(addr as *mut Area);
+        area.set_bottom(addr + size);
+        area.next = ptr::null_mut();
+
+        let list = &mut *self.free_areas.get();
+        if list.head.is_null() {
+            list.head = area;
+            return;
         }
 
-        match area {
-            None => panic!("Invalid pointer"),
-            Some(area) => area.dealloc(ptr, size),
-        };
+        let mut target: Option<&'static mut Area> = None;
+        for (area, _) in list.iter_with_prev() {
+            if area.addr() > addr {
+                break;
+            }
+            target = Some(area);
+        }
+
+        if target.is_some() {
+            let target = target.unwrap();
+            if target.bottom() == area.addr() {
+                target.set_bottom(area.bottom());
+                area = target;
+            } else {
+                area.next = target.next;
+                target.next = area;
+            }
+        } else {
+            area.next = list.head;
+            list.head = area;
+        }
+
+        if !area.next.is_null() {
+            let next = &mut *area.next;
+            if area.bottom() == next.addr() {
+                area.set_bottom(next.bottom());
+                area.next = next.next;
+            }
+        }
     }
 }
 
@@ -316,25 +300,122 @@ mod tests {
             self.buffer.len()
         }
 
+        fn total_free(&mut self) -> usize {
+            let mut size: usize = 0;
+            let list = self.allocator.free_areas.get_mut();
+            for (area, _) in list.iter_with_prev() {
+                size += area.size;
+            }
+            size
+        }
+
+        fn is_in_mem_range(&self, addr: usize) -> bool {
+            self.allocator.mem_top <= addr && addr < self.allocator.mem_end
+        }
+
+        fn check_free_areas(&mut self, print: bool) -> bool {
+            if print {
+                println!("----");
+            }
+
+            let mut ok = true;
+            let list = self.allocator.free_areas.get_mut();
+
+            let mut area = list.head;
+            while !area.is_null() {
+                if !self.is_in_mem_range(area as usize) {
+                    if print {
+                        println!("  {:p}!out_of_range!", area);
+                    }
+                    ok = false;
+                    break;
+                }
+
+                let size = unsafe { (*area).size };
+                let next = unsafe { (*area).next };
+
+                if print {
+                    print!("  top+{:04x}(size={:x}",
+                           area as usize - self.allocator.mem_top,
+                           size);
+                }
+
+                if area as usize + size > self.allocator.mem_end {
+                    if print {
+                        print!("!out_of_range!");
+                    }
+                    ok = false;
+                }
+
+                if !next.is_null() && area as usize + size > next as usize {
+                    if print {
+                        print!("!overlap_next!");
+                    }
+                    ok = false;
+                }
+
+                if print {
+                    print!(") -> ");
+                }
+
+                if next.is_null() {
+                    if print {
+                        println!("null");
+                    }
+                } else if self.is_in_mem_range(next as usize) {
+                    if print {
+                        println!("top+{:04x}",
+                                 next as usize - self.allocator.mem_top);
+                    }
+                } else {
+                    if print {
+                        println!("{:p}!out_of_range!", next);
+                    }
+                    ok = false;
+                }
+
+                if !ok {
+                    break;
+                }
+
+                area = next;
+            }
+
+            if print {
+                println!("----");
+            }
+
+            ok
+        }
+
+        #[allow(dead_code)]
+        fn print_free_areas(&mut self) {
+            self.check_free_areas(true);
+        }
+
+        fn check_integrity(&mut self) {
+            if !self.check_free_areas(false) {
+                self.check_free_areas(true);
+                panic!("[Bug] Broken linked list");
+            }
+        }
+
         fn check_in_range(&self, addr: usize, size: usize) {
             assert!(self.buf_top() <= addr && addr + size <= self.buf_end());
         }
 
-        #[cfg(test)]
-        fn total_free(&self) -> usize {
-            self.allocator.total_free()
-        }
-
-        fn alloc(&self, size: usize) -> *mut u8 {
+        fn alloc(&mut self, size: usize) -> *mut u8 {
             let ptr = unsafe { self.allocator.__alloc(size) };
             if !ptr.is_null() {
                 self.check_in_range(ptr as usize, size);
             }
+            self.check_integrity();
             ptr
         }
 
-        fn dealloc(&self, ptr: *mut u8, size: usize) {
+        fn dealloc(&mut self, ptr: *mut u8, size: usize) {
             unsafe { self.allocator.__dealloc(ptr, size) }
+            self.check_integrity();
         }
     }
 
@@ -349,14 +430,14 @@ mod tests {
 
     #[test]
     fn alloc_free() {
-        let heap = Heap::new();
+        let mut heap = Heap::new();
         let ptr = heap.alloc(0x1000);
         heap.dealloc(ptr, 0x1000);
     }
 
     #[test]
     fn alloc_free2() {
-        let heap = Heap::new();
+        let mut heap = Heap::new();
         let total_free = heap.total_free();
 
         let ptr1 = heap.alloc(4);
@@ -378,19 +459,16 @@ mod tests {
         use mersenne_twister::MersenneTwister;
         use rand::{Rng, SeedableRng};
 
-        let heap = Heap::new();
+        let mut heap = Heap::new();
         let total_free = heap.total_free();
 
         let seed: u64 = 0xea0a_b58a_f23d_9521;
         let mut rng: MersenneTwister = SeedableRng::from_seed(seed);
+        let mut free_list: Vec<(*mut u8, usize)> = Vec::new();
 
         for _ in 0..100 {
-            let mut size_list: Vec<usize> =
-                (4..(TEST_HEAP_SIZE/2)).step_by(4).collect();
-            let mut free_list: Vec<(*mut u8, usize)> = Vec::new();
-
-            rng.shuffle(&mut size_list);
-            for size in size_list {
+            loop {
+                let size = rng.gen_range(1, TEST_HEAP_SIZE/128) * 4;
                 let ptr = heap.alloc(size);
                 if ptr.is_null() {
                     break
@@ -399,12 +477,24 @@ mod tests {
             }
 
             rng.shuffle(&mut free_list);
-            for (ptr, size) in free_list {
+            for _ in 0..rng.gen_range(0, free_list.len()) {
+                let (ptr, size) = free_list.pop().unwrap();
                 heap.dealloc(ptr, size);
-                heap.total_free();
             }
-
-            assert!(heap.total_free() == total_free);
         }
+
+        let size = crate::Area::size_align();
+        for _ in 0..(heap.total_free() / size) {
+            let ptr = heap.alloc(size);
+            assert!(!ptr.is_null());
+            free_list.push((ptr, size));
+        }
+
+        rng.shuffle(&mut free_list);
+        for (ptr, size) in free_list {
+            heap.dealloc(ptr, size);
+        }
+
+        assert!(heap.total_free() == total_free);
     }
 }
