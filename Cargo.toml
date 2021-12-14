@@ -23,4 +23,5 @@ members = [
     "libs/bitfield",
     "libs/kallsyms",
     "libs/linked_list_allocator",
+    "libs/vfs",
 ]
