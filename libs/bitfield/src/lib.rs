@@ -18,36 +18,6 @@ macro_rules! define_typed_number_field {
             const MASK: $i = ((2 << LEFT) - 1) ^ ((1 << RIGHT) - 1);
         }
 
-        /**** BitOr composition ****/
-
-        impl<const L: u32, const R: u32, const OL: u32, const OR: u32>
-            core::ops::BitOr<$crate::NumberField<$t, $i, OL, OR>> for $crate::NumberField<$t, $i, L, R>
-        {
-            type Output = $t;
-
-            fn bitor(self, _: $crate::NumberField<$t, $i, OL, OR>) -> Self::Output {
-                $t(Self::MASK | $crate::NumberField::<$t, $i, OL, OR>::MASK)
-            }
-        }
-
-        impl<const OL: u32, const OR: u32> core::ops::BitOr<$crate::NumberField<$t, $i, OL, OR>> for $t
-        {
-            type Output = $t;
-
-            fn bitor(self, _: $crate::NumberField<$t, $i, OL, OR>) -> Self::Output {
-                $t(self.0 | $crate::NumberField::<$t, $i, OL, OR>::MASK)
-            }
-        }
-
-        impl<const L: u32, const R: u32> core::ops::BitOr<$t> for $crate::NumberField<$t, $i, L, R>
-        {
-            type Output = $t;
-
-            fn bitor(self, rhs: $t) -> Self::Output {
-                $t(Self::MASK | rhs.0)
-            }
-        }
-
         /**** Fn generator ****/
 
         impl<const L: u32, const R: u32> FnOnce<($i,)> for $crate::NumberField<$t, $i, L, R> {
