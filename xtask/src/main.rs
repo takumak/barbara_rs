@@ -41,6 +41,7 @@ fn cargo_target(cmd: &str, args: &Vec<String>) {
 fn cargo_testall(args: &Vec<String>) {
     let mut args_all = vec![
         "test",
+        "-p", "bitfield",
         "-p", "kallsyms",
         "-p", "linked_list_allocator",
         "--tests",
