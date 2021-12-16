@@ -1,9 +1,7 @@
-type NodeId = usize;
-const NODE_ID_ROOT: NodeId = 0;
-
 use crate::fscore::{
     DEntry,
-    Node,
+    NodeId,
+    NODE_ID_ROOT,
     NodeType,
 };
 
@@ -14,7 +12,9 @@ use core::{
 };
 
 struct RamFsNode {
-    node: Node,
+    id: NodeId,
+    name: String,
+    ntype: NodeType,
     children: Vec<NodeId>,
     file_body: Vec<u8>,
 }
@@ -30,11 +30,9 @@ impl RamFs {
         fsnodes.insert(
             NODE_ID_ROOT,
             RamFsNode {
-                node: Node {
-                    name: String::from(""),
-                    ntype: NodeType::Directory,
-                    fs_data: NODE_ID_ROOT,
-                },
+                id: NODE_ID_ROOT,
+                name: String::from(""),
+                ntype: NodeType::Directory,
                 children: Vec::new(),
                 file_body: Vec::new(),
             }
@@ -47,104 +45,103 @@ impl RamFs {
 }
 
 impl crate::FileSystem for RamFs {
-    fn read_dir(&self, node: &Node, pos: usize) -> Result<Option<DEntry>, String> {
-        let parent = match self.fsnodes.get(&node.fs_data) {
+    fn read_dir(&self, dir: NodeId, pos: usize) -> Result<Option<DEntry>, String> {
+        let dir_node = match self.fsnodes.get(&dir) {
             Some(n) => n,
-            None => return Err(format!("Node not found (maybe a bug): id={}", node.fs_data)),
+            None => return Err(format!("Node not found (maybe a bug): id={}", dir)),
         };
 
-        if parent.node.ntype != NodeType::Directory {
-            return Err(format!("Attempt to read_dir() for a file: id={}", node.fs_data));
+        if dir_node.ntype != NodeType::Directory {
+            return Err(format!("Attempt to read_dir() for a file: id={}", dir_node.id));
         }
 
-        if pos >= parent.children.len() {
+        if pos >= dir_node.children.len() {
             Ok(None)
         } else {
-            let fsnode = match self.fsnodes.get(&parent.children[pos]) {
+            let fsnode = match self.fsnodes.get(&dir_node.children[pos]) {
                 Some(n) => n,
-                None => return Err(format!("Node not found (maybe a bug): id={}", node.fs_data)),
+                None => return Err(format!("Node not found (maybe a bug): id={}", dir_node.id)),
             };
             Ok(Some(DEntry {
-                name: fsnode.node.name.to_owned(),
-                ntype: fsnode.node.ntype,
+                name: dir_node.name.to_owned(),
+                ntype: node.ntype,
             }))
         }
     }
 
-    fn create<'a>(&'a mut self, node: &Node, dent: &DEntry) -> Result<&'a Node, String> {
-        let parent = match self.fsnodes.get(&node.fs_data) {
+    fn create(&mut self, dir: NodeId, dent: &DEntry) -> Result<NodeId, String> {
+        let dir_node = match self.fsnodes.get(&dir) {
             Some(n) => n,
-            None => return Err(format!("Node not found (maybe a bug): id={}", node.fs_data)),
+            None => return Err(format!("Node not found (maybe a bug): id={}", dir)),
         };
 
-        if parent.node.ntype != NodeType::Directory {
-            return Err(format!("Attempt to create child node for a file: id={}", node.fs_data));
+        if dir_node.ntype != NodeType::Directory {
+            return Err(format!("Attempt to create child node for a file: id={}", dir_node.id));
         }
 
         let node_id = self.next_node_id;
         self.next_node_id += 1;
 
-        let fsnode = RamFsNode {
-            node: Node {
-                name: dent.name.to_owned(),
-                ntype: dent.ntype,
-                fs_data: node_id,
-            },
+        let newnode = RamFsNode {
+            id: node_id,
+            name: dent.name.to_owned(),
+            ntype: dent.ntype,
             children: Vec::new(),
             file_body: Vec::new(),
         };
 
-        self.fsnodes.insert(node_id, fsnode);
-        Ok(&self.fsnodes.get(&node_id).unwrap().node)
+        self.fsnodes.insert(node_id, newnode);
+        dir_node.children.push(node_id);
+
+        Ok(node_id)
     }
 
-    fn read(&self, node: &Node, off: usize, data: &mut [u8]) -> Result<usize, String> {
-        let file = match self.fsnodes.get(&node.fs_data) {
+    fn read(&self, file: NodeId, off: usize, data: &mut [u8]) -> Result<usize, String> {
+        let file_node = match self.fsnodes.get(&file) {
             Some(n) => n,
-            None => return Err(format!("Node not found (maybe a bug): id={}", node.fs_data)),
+            None => return Err(format!("Node not found (maybe a bug): id={}", file)),
         };
 
-        if file.node.ntype != NodeType::RegularFile {
-            return Err(format!("Attempt to read() for a directory: id={}", node.fs_data));
+        if file_node.ntype != NodeType::RegularFile {
+            return Err(format!("Attempt to read() for a directory: id={}", file_node.id));
         }
 
-        if off >= file.file_body.len() {
+        if off >= file_node.file_body.len() {
             Ok(0)
         } else {
-            let read_size = min(off + data.len(), file.file_body.len()) - off;
-            data[..read_size].copy_from_slice(&file.file_body[off..read_size]);
+            let read_size = min(off + data.len(), file_node.file_body.len()) - off;
+            data[..read_size].copy_from_slice(&file_node.file_body[off..read_size]);
             Ok(read_size)
         }
     }
 
-    fn write(&mut self, node: &Node, off: usize, data: &[u8]) -> Result<usize, String> {
-        let file = match self.fsnodes.get_mut(&node.fs_data) {
+    fn write(&mut self, file: NodeId, off: usize, data: &[u8]) -> Result<usize, String> {
+        let file_node = match self.fsnodes.get_mut(&file) {
             Some(n) => n,
-            None => return Err(format!("Node not found (maybe a bug): id={}", node.fs_data)),
+            None => return Err(format!("Node not found (maybe a bug): id={}", file)),
         };
 
-        if file.node.ntype != NodeType::RegularFile {
-            return Err(format!("Attempt to write() for a directory: id={}", node.fs_data));
+        if file_node.ntype != NodeType::RegularFile {
+            return Err(format!("Attempt to write() for a directory: id={}", file_node.id));
         }
 
-        if off < file.file_body.len() {
-            let overwrite_size = min(off + data.len(), file.file_body.len()) - off;
-            file.file_body[off..off+overwrite_size].copy_from_slice(&data[..overwrite_size]);
+        if off < file_node.file_body.len() {
+            let overwrite_size = min(off + data.len(), file_node.file_body.len()) - off;
+            file_node.file_body[off..off+overwrite_size].copy_from_slice(&data[..overwrite_size]);
         }
 
-        if off > file.file_body.len() {
-            file.file_body.extend(iter::repeat(0).take(off - file.file_body.len()));
+        if off > file_node.file_body.len() {
+            file_node.file_body.extend(iter::repeat(0).take(off - file_node.file_body.len()));
         }
 
-        if off + data.len() > file.file_body.len() {
-            let from_i = max(file.file_body.len(), off) - off;
-            file.file_body.extend_from_slice(&data[from_i..]);
+        if off + data.len() > file_node.file_body.len() {
+            let from_i = max(file_node.file_body.len(), off) - off;
+            file_node.file_body.extend_from_slice(&data[from_i..]);
         }
 
         Ok(data.len())
     }
 }
-
 
 #[cfg(test)]
 mod tests {

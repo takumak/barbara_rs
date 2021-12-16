@@ -1,36 +1,58 @@
 extern crate alloc;
 
+O_APPEND
+O_CREAT
+O_RDONLY, O_WRONLY, or O_RDWR
+
 use alloc::{
     boxed::Box,
     string::String,
     vec::Vec,
 };
+use alloc::collections::btree_map::BTreeMap;
 
 mod fscore;
 mod fs_ramfs;
 
-use fscore::FileSystem;
+use fscore::{
+    FileSystem,
+    NodeId,
+    NodeType,
+};
 use fs_ramfs::RamFs;
 
+type MountId = usize;
+type FileDescriptor = i32;
+
+struct OpenedFile {
+    fd: FileDescriptor,
+    parent_fd: FileDescriptor,
+    mount_id: MountId,
+    node_id: NodeId,
+    ntype: NodeType,
+    unlink: bool,
+    refcnt: usize,
+}
+
 struct Mount {
-    filesystem: Box<dyn FileSystem>,
+    id: MountId,
     mountpoint: Vec<String>,
+    filesystem: Box<dyn FileSystem>,
 }
 
 struct Vfs {
     mount: Vec<Mount>,
+    next_mnt_id: MountId,
+    opened_files: BTreeMap<NodeId, File>,
 }
 
 impl Vfs {
     const fn new() -> Self {
-        Self { mount: Vec::new() }
-    }
-
-    fn init(&mut self) {
-        self.mount.insert(0, Mount {
-            filesystem: Box::new(RamFs::new()),
-            mountpoint: Vec::new(),
-        });
+        Self {
+            mount: Vec::new(),
+            next_mnt_id: 1,
+            opened_files: BTreeMap::new(),
+        }
     }
 
     fn parse_path<'a>(path: &'a str) -> Result<Vec<&'a str>, String> {
@@ -52,7 +74,31 @@ impl Vfs {
         Ok(path_vec)
     }
 
-    fn find_mount<'a, 'b>(&'a self, path: &'b str) -> Result<(&'a Mount, Vec<&'b str>), String> {
+    fn mount(&mut self, mountpoint: &str, filesystem: Box<dyn FileSystem>) -> Result<(), String> {
+        let mountpoint = match Self::parse_path(mountpoint) {
+            Ok(v) => v.iter().map(|&s| String::from(s)).collect(),
+            Err(m) => return Err(m)
+        };
+
+        self.mount.insert(0, Mount {
+            id: self.next_mnt_id,
+            mountpoint,
+            filesystem,
+        });
+
+        self.next_mnt_id += 1;
+
+        Ok(())
+    }
+
+    fn init(&mut self) {
+        if let Err(m) = self.mount("/", Box::new(RamFs::new())) {
+            panic!("Failed to mount root: {}", m)
+        }
+    }
+
+    fn find_mount<'a, 'b>(&'a self, path: &'b str) ->
+        Result<(&'a Mount, Vec<&'b str>), String> {
         let path: Vec<&'b str> = match Self::parse_path(path) {
             Ok(r) => r,
             Err(m) => return Err(m),
@@ -68,13 +114,15 @@ impl Vfs {
         Ok((mount.unwrap(), Vec::from(&path[mount.unwrap().mountpoint.len()..])))
     }
 
-    // fn read_dir(&self, path: &str) -> Result<DirIterator, String> {
-    //     let (mount, mpath) = match self.find_mount(path) {
-    //         Ok(r) => r,
-    //         Err(m) => return Err(m),
-    //     };
-    //     mount.filesystem.read_dir(mpath.as_slice())
-    // }
+    fn open(&self, path: &str, mode: &str) -> Result<File, String> {
+        let (mount, mpath) = match self.find_mount(path) {
+            Ok(r) => r,
+            Err(m) => return Err(m),
+        };
+
+        
+        mount.filesystem.read_dir(mpath.as_slice())
+    }
 
     // fn create_dir(&self, parent: &str, name: &str) -> Result<(), String> {
     //     let (mount, mpath) = match self.find_mount(parent) {
