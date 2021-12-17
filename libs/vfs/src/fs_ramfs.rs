@@ -45,14 +45,14 @@ impl RamFs {
 }
 
 impl crate::FileSystem for RamFs {
-    fn read_dir(&self, dir: NodeId, pos: usize) -> Result<Option<(DEntry, NodeId)>, String> {
+    fn readdir(&self, dir: NodeId, pos: usize) -> Result<Option<(DEntry, NodeId)>, String> {
         let dir_node = match self.fsnodes.get(&dir) {
             Some(n) => n,
             None => return Err(format!("Node not found (maybe a bug): id={}", dir)),
         };
 
         if dir_node.ntype != NodeType::Directory {
-            return Err(format!("Attempt to read_dir() for a file: id={}", dir_node.id));
+            return Err(format!("Attempt to readdir() for a file: id={}", dir_node.id));
         }
 
         if pos >= dir_node.children.len() {

@@ -13,7 +13,7 @@ pub struct DEntry {
 }
 
 pub trait FileSystem {
-    fn read_dir(&self, dir: NodeId, pos: usize) -> Result<Option<(DEntry, NodeId)>, String>;
+    fn readdir(&self, dir: NodeId, pos: usize) -> Result<Option<(DEntry, NodeId)>, String>;
     fn create(&mut self, dir: NodeId, dent: &DEntry) -> Result<NodeId, String>;
     fn read(&self, file: NodeId, off: usize, data: &mut [u8]) -> Result<usize, String>;
     fn write(&mut self, file: NodeId, off: usize, data: &[u8]) -> Result<usize, String>;
@@ -21,7 +21,7 @@ pub trait FileSystem {
     fn lookup(&self, dir: NodeId, name: &str) -> Result<Option<NodeId>, String> {
         let mut pos: usize = 0;
         loop {
-            match self.read_dir(dir, pos) {
+            match self.readdir(dir, pos) {
                 Ok(Some((ent, node_id))) => {
                     if ent.name == *name {
                         return Ok(Some(node_id))
