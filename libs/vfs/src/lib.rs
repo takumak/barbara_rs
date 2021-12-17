@@ -547,4 +547,34 @@ mod tests {
 
         assert_eq!(buf[..len], *"foo\nbar\nbaz\n***\n".as_bytes());
     }
+
+    #[test]
+    fn mkdir() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "/foo.txt".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        vfs.mkdir("/hoge").unwrap();
+
+        let fd = vfs.open("/hoge/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "/hoge/foo.txt".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        // validate
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        let len = vfs.read(fd, &mut buf).unwrap();
+        vfs.close(fd).unwrap();
+        assert_eq!(buf[..len], *"/foo.txt".as_bytes());
+
+        let fd = vfs.open("/hoge/foo.txt", OpenMode::READ).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        let len = vfs.read(fd, &mut buf).unwrap();
+        vfs.close(fd).unwrap();
+        assert_eq!(buf[..len], *"/hoge/foo.txt".as_bytes());
+    }
 }
