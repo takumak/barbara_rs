@@ -1,5 +1,7 @@
 use std::process;
 
+extern crate cargo_toml;
+
 extern crate clap;
 use clap::{Parser, Subcommand};
 
@@ -41,9 +43,6 @@ fn cargo_target(cmd: &str, args: &Vec<String>) {
 fn cargo_testall(args: &Vec<String>) {
     let mut args_all = vec![
         "test",
-        "-p", "bitfield",
-        "-p", "kallsyms",
-        "-p", "linked_list_allocator",
         "--tests",
     ];
     args_all.extend(args.iter().map(|s| &**s));
@@ -67,7 +66,21 @@ fn main() {
             cargo_target("build", args)
         }
         Some(Commands::Testall { args }) => {
-            cargo_testall(args)
+            let manifest = cargo_toml::Manifest::from_path("Cargo.toml").unwrap();
+            let workspace = manifest.workspace.unwrap();
+            let test_packages: Vec<String> =
+                workspace.members.iter().filter(|&s| s != "xtask")
+                .map(|s| s.to_owned()).collect();
+            println!("All packages: {:?}", workspace.members);
+            println!("Test packages: {:?}", test_packages);
+
+            let mut new_args: Vec<String> = Vec::new();
+            for p in test_packages {
+                new_args.push("-p".into());
+                new_args.push(p.as_str().split('/').last().unwrap().into());
+            }
+            new_args.extend(args.iter().cloned());
+            cargo_testall(&new_args);
         }
         None => {}
     }
