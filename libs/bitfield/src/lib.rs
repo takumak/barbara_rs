@@ -26,7 +26,7 @@ macro_rules! bitfield {
         impl $stname {
             bitfield!{@field $stname, $typ {$($body)*}}
 
-            fn all(&self, m: $stname) -> bool {
+            fn is_set(&self, m: $stname) -> bool {
                 (self.0 & m.0) == m.0
             }
 
@@ -137,10 +137,10 @@ mod tests {
     #[test]
     fn test_bool_1() {
         let mode: OpenMode = OpenMode::READ;
-        assert_eq!(mode.all(OpenMode::READ), true);
-        assert_eq!(mode.all(OpenMode::WRITE), false);
-        assert_eq!(mode.all(OpenMode::CREATE), false);
-        assert_eq!(mode.all(OpenMode::APPEND), false);
+        assert_eq!(mode.is_set(OpenMode::READ), true);
+        assert_eq!(mode.is_set(OpenMode::WRITE), false);
+        assert_eq!(mode.is_set(OpenMode::CREATE), false);
+        assert_eq!(mode.is_set(OpenMode::APPEND), false);
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 0);
     }
@@ -148,10 +148,10 @@ mod tests {
     #[test]
     fn test_bool_2() {
         let mode: OpenMode = OpenMode::WRITE;
-        assert_eq!(mode.all(OpenMode::READ), false);
-        assert_eq!(mode.all(OpenMode::WRITE), true);
-        assert_eq!(mode.all(OpenMode::CREATE), false);
-        assert_eq!(mode.all(OpenMode::APPEND), false);
+        assert_eq!(mode.is_set(OpenMode::READ), false);
+        assert_eq!(mode.is_set(OpenMode::WRITE), true);
+        assert_eq!(mode.is_set(OpenMode::CREATE), false);
+        assert_eq!(mode.is_set(OpenMode::APPEND), false);
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 0);
     }
@@ -159,19 +159,19 @@ mod tests {
     #[test]
     fn test_bool_3() {
         let mode: OpenMode = OpenMode::READ | OpenMode::WRITE | OpenMode::CREATE;
-        assert_eq!(mode.all(OpenMode::READ), true);
-        assert_eq!(mode.all(OpenMode::WRITE), true);
-        assert_eq!(mode.all(OpenMode::CREATE), true);
-        assert_eq!(mode.all(OpenMode::APPEND), false);
+        assert_eq!(mode.is_set(OpenMode::READ), true);
+        assert_eq!(mode.is_set(OpenMode::WRITE), true);
+        assert_eq!(mode.is_set(OpenMode::CREATE), true);
+        assert_eq!(mode.is_set(OpenMode::APPEND), false);
 
-        assert_eq!(mode.all(OpenMode::READ |
-                            OpenMode::WRITE |
-                            OpenMode::CREATE |
-                            OpenMode::APPEND), false);
+        assert_eq!(mode.is_set(OpenMode::READ |
+                               OpenMode::WRITE |
+                               OpenMode::CREATE |
+                               OpenMode::APPEND), false);
 
-        assert_eq!(mode.all(OpenMode::READ |
-                            OpenMode::WRITE |
-                            OpenMode::CREATE), true);
+        assert_eq!(mode.is_set(OpenMode::READ |
+                               OpenMode::WRITE |
+                               OpenMode::CREATE), true);
 
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 0);
@@ -180,10 +180,10 @@ mod tests {
     #[test]
     fn test_num() {
         let mode: OpenMode = OpenMode::CREATE | OpenMode::NUM3.compose(7);
-        assert_eq!(mode.all(OpenMode::READ), false);
-        assert_eq!(mode.all(OpenMode::WRITE), false);
-        assert_eq!(mode.all(OpenMode::CREATE), true);
-        assert_eq!(mode.all(OpenMode::APPEND), false);
+        assert_eq!(mode.is_set(OpenMode::READ), false);
+        assert_eq!(mode.is_set(OpenMode::WRITE), false);
+        assert_eq!(mode.is_set(OpenMode::CREATE), true);
+        assert_eq!(mode.is_set(OpenMode::APPEND), false);
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 7);
     }

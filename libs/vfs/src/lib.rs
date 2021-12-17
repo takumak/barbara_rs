@@ -171,7 +171,7 @@ impl Vfs {
                     Ok(Some(node_id)) => node_id,
                     Err(m) => return Err(m),
                     Ok(None) => {
-                        if mode.all(OpenMode::CREATE) {
+                        if mode.is_set(OpenMode::CREATE) {
                             match mount.filesystem.create(
                                 dir,
                                 &DEntry {
@@ -189,14 +189,14 @@ impl Vfs {
                 }
             };
 
-        if mode.all(OpenMode::TRUNC) {
+        if mode.is_set(OpenMode::TRUNC) {
             if let Err(m) = mount.filesystem.truncate(node_id, 0) {
                 return Err(m)
             }
         }
 
         let pos: usize =
-            if mode.all(OpenMode::APPEND) {
+            if mode.is_set(OpenMode::APPEND) {
                 match mount.filesystem.getsize(node_id) {
                     Ok(size) => size,
                     Err(m) => return Err(m),
@@ -229,7 +229,7 @@ impl Vfs {
                 Err(m) => return Err(m),
             };
 
-        if !file.mode.all(OpenMode::READ) {
+        if !file.mode.is_set(OpenMode::READ) {
             return Err(format!("Permission error: fd={}", fd));
         }
 
@@ -249,7 +249,7 @@ impl Vfs {
                 Err(m) => return Err(m),
             };
 
-        if !file.mode.all(OpenMode::WRITE) {
+        if !file.mode.is_set(OpenMode::WRITE) {
             return Err(format!("Permission error: fd={}", fd));
         }
 

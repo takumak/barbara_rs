@@ -40,11 +40,11 @@ impl Console for ArmUart {
     }
 
     fn putc(&mut self, byte: u8) {
-        while self.state.read().all(State::TX_BF) { }
+        while self.state.read().is_set(State::TX_BF) { }
         self.data.write(byte)
     }
 
     fn flush(&self) {
-        while self.state.read().all(State::TX_BF) {}
+        while self.state.read().is_set(State::TX_BF) {}
     }
 }
