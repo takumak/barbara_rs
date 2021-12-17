@@ -112,13 +112,13 @@ macro_rules! bitfield {
     };
 
     {$stname:ident : $typ:ty { $($body:tt)* }} => {
-        #[derive(Clone, Copy)]
+        #[derive(Clone, Copy, PartialEq, Debug)]
         struct $stname($typ);
         bitfield!{@impl $stname, $typ { $($body)* }}
     };
 
     {pub $stname:ident : $typ:ty { $($body:tt)* }} => {
-        #[derive(Clone, Copy)]
+        #[derive(Clone, Copy, PartialEq, Debug)]
         pub struct $stname($typ);
         bitfield!{@impl $stname, $typ { $($body)* }}
     };
