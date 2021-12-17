@@ -144,4 +144,18 @@ impl crate::FileSystem for RamFs {
 
         Ok(data.len())
     }
+
+    fn truncate(&mut self, file: NodeId, len: usize) -> Result<(), String> {
+        let file_node = match self.fsnodes.get_mut(&file) {
+            Some(n) => n,
+            None => return Err(format!("Node not found (maybe a bug): id={}", file)),
+        };
+
+        if file_node.ntype != NodeType::RegularFile {
+            return Err(format!("Attempt to truncate() for a directory: id={}", file_node.id));
+        }
+
+        file_node.file_body.truncate(len);
+        Ok(())
+    }
 }

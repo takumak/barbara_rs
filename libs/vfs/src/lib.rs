@@ -158,7 +158,6 @@ impl Vfs {
 
         TODO:
          * Support for OpenMode::APPEND
-         * Support for OpenMode::TRUNC
 
          */
 
@@ -196,6 +195,12 @@ impl Vfs {
                     },
                 }
             };
+
+        if mode.all(OpenMode::TRUNC) {
+            if let Err(m) = mount.filesystem.truncate(node_id, 0) {
+                return Err(m)
+            }
+        }
 
         let mount_id = mount.id; // mount, *self borrow ends here
 

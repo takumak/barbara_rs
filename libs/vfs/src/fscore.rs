@@ -17,6 +17,7 @@ pub trait FileSystem {
     fn create(&mut self, dir: NodeId, dent: &DEntry) -> Result<NodeId, String>;
     fn read(&self, file: NodeId, off: usize, data: &mut [u8]) -> Result<usize, String>;
     fn write(&mut self, file: NodeId, off: usize, data: &[u8]) -> Result<usize, String>;
+    fn truncate(&mut self, file: NodeId, len: usize) -> Result<(), String>;
 
     fn lookup(&self, dir: NodeId, name: &str) -> Result<Option<NodeId>, String> {
         let mut pos: usize = 0;
