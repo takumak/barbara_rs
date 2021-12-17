@@ -113,7 +113,7 @@ impl crate::FileSystem for RamFs {
             Ok(0)
         } else {
             let read_size = min(off + data.len(), file_node.file_body.len()) - off;
-            data[..read_size].copy_from_slice(&file_node.file_body[off..read_size]);
+            data[..read_size].copy_from_slice(&file_node.file_body[off..(off+read_size)]);
             Ok(read_size)
         }
     }
