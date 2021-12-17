@@ -23,9 +23,10 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 name = "barbara"
 version = "0.1.0"
 dependencies = [
+ "bitfield",
  "kallsyms",
  "linked_list_allocator",
- "tock-registers",
+ "mmio",
 ]
 
 [[package]]
@@ -154,6 +155,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b85dbb2f68dfc026aac8f4c5196579896b10ee45e8b9a1a3b325fab3043d1cb0"
 dependencies = [
  "rand",
+]
+
+[[package]]
+name = "mmio"
+version = "0.1.0"
+dependencies = [
+ "bitfield",
 ]
 
 [[package]]
@@ -292,11 +300,6 @@ name = "textwrap"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0066c8d12af8b5acd21e00547c3797fde4e8677254a7ee429176ccebbe93dd80"
-
-[[package]]
-name = "tock-registers"
-version = "0.7.0"
-source = "git+https://github.com/tock/tock?rev=b8f5da9c09373a5bbf48e70e9cef16d669f3cdde#b8f5da9c09373a5bbf48e70e9cef16d669f3cdde"
 
 [[package]]
 name = "toml"
