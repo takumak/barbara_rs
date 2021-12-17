@@ -43,6 +43,18 @@ macro_rules! bitfield {
             }
         }
 
+        impl From<$typ> for $stname {
+            fn from(v: $typ) -> Self {
+                Self(v)
+            }
+        }
+
+        impl From<$stname> for $typ {
+            fn from(v: $stname) -> Self {
+                v.0
+            }
+        }
+
         impl core::ops::BitOr for $stname {
             type Output = $stname;
             fn bitor(self, rhs: $stname) -> $stname {
