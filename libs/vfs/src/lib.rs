@@ -40,6 +40,7 @@ type FileDescriptor = i32;
 struct OpenedFile {
     mount_id: MountId,
     node_id: NodeId,
+    mode: OpenMode,
     pos: usize,
 }
 
@@ -204,6 +205,7 @@ impl Vfs {
         let file = OpenedFile {
             mount_id,
             node_id,
+            mode,
             pos: 0,
         };
 
@@ -213,13 +215,15 @@ impl Vfs {
     }
 
     fn read(&mut self, fd: FileDescriptor, data: &mut [u8]) -> Result<usize, String> {
-        /* TODO: OpenMode permission check */
-
         let (file, mount) =
             match self.get_file_mount_from_fd(fd) {
                 Ok((file, mount)) => (file, mount),
                 Err(m) => return Err(m),
             };
+
+        if !file.mode.all(OpenMode::READ) {
+            return Err(format!("Permission error: fd={}", fd));
+        }
 
         match mount.filesystem.read(file.node_id, file.pos, data) {
             Ok(size) => {
@@ -231,13 +235,15 @@ impl Vfs {
     }
 
     fn write(&mut self, fd: FileDescriptor, data: &[u8]) -> Result<usize, String> {
-        /* TODO: OpenMode permission check */
-
         let (file, mount) =
             match self.get_file_mount_from_fd(fd) {
                 Ok((file, mount)) => (file, mount),
                 Err(m) => return Err(m),
             };
+
+        if !file.mode.all(OpenMode::WRITE) {
+            return Err(format!("Permission error: fd={}", fd));
+        }
 
         match mount.filesystem.write(file.node_id, file.pos, data) {
             Ok(size) => {
