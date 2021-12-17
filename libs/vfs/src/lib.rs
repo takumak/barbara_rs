@@ -154,13 +154,6 @@ impl Vfs {
             Err(m) => return Err(m),
         };
 
-        /*
-
-        TODO:
-         * Support for OpenMode::APPEND
-
-         */
-
         let node_id =
             if mpath.len() == 0 {
                 NODE_ID_ROOT
@@ -202,6 +195,16 @@ impl Vfs {
             }
         }
 
+        let pos: usize =
+            if mode.all(OpenMode::APPEND) {
+                match mount.filesystem.getsize(node_id) {
+                    Ok(size) => size,
+                    Err(m) => return Err(m),
+                }
+            } else {
+                0
+            };
+
         let mount_id = mount.id; // mount, *self borrow ends here
 
         let fd = self.next_fd;
@@ -211,7 +214,7 @@ impl Vfs {
             mount_id,
             node_id,
             mode,
-            pos: 0,
+            pos,
         };
 
         self.opened_files.insert(fd, file);

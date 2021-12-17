@@ -158,4 +158,12 @@ impl crate::FileSystem for RamFs {
         file_node.file_body.truncate(len);
         Ok(())
     }
+
+    fn getsize(&self, file: NodeId) -> Result<usize, String> {
+        let file_node = match self.fsnodes.get(&file) {
+            Some(n) => n,
+            None => return Err(format!("Node not found (maybe a bug): id={}", file)),
+        };
+        Ok(file_node.file_body.len())
+    }
 }
