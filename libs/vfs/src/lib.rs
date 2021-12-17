@@ -1,23 +1,36 @@
-extern crate alloc;
+#![feature(const_btree_new)]
+#![feature(fn_traits)]
+#![feature(unboxed_closures)]
 
-O_APPEND
-O_CREAT
-O_RDONLY, O_WRONLY, or O_RDWR
+extern crate alloc;
 
 use alloc::{
     boxed::Box,
+    collections::btree_map::BTreeMap,
     string::String,
     vec::Vec,
 };
-use alloc::collections::btree_map::BTreeMap;
+use bitfield::bitfield;
+
+bitfield!{
+    pub OpenMode: u32 {
+        READ[0];
+        WRITE[1];
+        CREATE[2];
+        APPEND[3];
+        TRUNC[4];
+    }
+}
 
 mod fscore;
 mod fs_ramfs;
 
 use fscore::{
+    DEntry,
     FileSystem,
     NodeId,
     NodeType,
+    NODE_ID_ROOT,
 };
 use fs_ramfs::RamFs;
 
@@ -25,13 +38,9 @@ type MountId = usize;
 type FileDescriptor = i32;
 
 struct OpenedFile {
-    fd: FileDescriptor,
-    parent_fd: FileDescriptor,
     mount_id: MountId,
     node_id: NodeId,
-    ntype: NodeType,
-    unlink: bool,
-    refcnt: usize,
+    pos: usize,
 }
 
 struct Mount {
@@ -43,7 +52,8 @@ struct Mount {
 struct Vfs {
     mount: Vec<Mount>,
     next_mnt_id: MountId,
-    opened_files: BTreeMap<NodeId, File>,
+    opened_files: BTreeMap<FileDescriptor, OpenedFile>,
+    next_fd: FileDescriptor,
 }
 
 impl Vfs {
@@ -52,6 +62,7 @@ impl Vfs {
             mount: Vec::new(),
             next_mnt_id: 1,
             opened_files: BTreeMap::new(),
+            next_fd: 4,
         }
     }
 
@@ -97,40 +108,183 @@ impl Vfs {
         }
     }
 
-    fn find_mount<'a, 'b>(&'a self, path: &'b str) ->
-        Result<(&'a Mount, Vec<&'b str>), String> {
+    fn find_mount_by_path_mut<'a, 'b>(&'a mut self, path: &'b str) ->
+        Result<(&'a mut Mount, Vec<&'b str>), String>
+    {
         let path: Vec<&'b str> = match Self::parse_path(path) {
             Ok(r) => r,
             Err(m) => return Err(m),
         };
-        let mut mount: Option<&'a Mount> = None;
-        for m in self.mount.iter().rev() {
+        let mut mount: Option<&'a mut Mount> = None;
+        for m in self.mount.iter_mut().rev() {
             if path.iter().map(|s| *s).eq(m.mountpoint.iter().map(|s| s.as_str())) {
                 mount = Some(m);
                 break;
             }
         }
         assert!(mount.is_some());
-        Ok((mount.unwrap(), Vec::from(&path[mount.unwrap().mountpoint.len()..])))
+        let mount = mount.unwrap();
+        let mpath = Vec::from(&path[mount.mountpoint.len()..]);
+        Ok((mount, mpath))
     }
 
-    fn open(&self, path: &str, mode: &str) -> Result<File, String> {
-        let (mount, mpath) = match self.find_mount(path) {
+    fn open(&mut self, path: &str, mode: OpenMode) -> Result<FileDescriptor, String> {
+        let (mount, mpath) = match self.find_mount_by_path_mut(path) {
             Ok(r) => r,
             Err(m) => return Err(m),
         };
 
-        
-        mount.filesystem.read_dir(mpath.as_slice())
+        /*
+
+        TODO:
+         * Support for OpenMode::APPEND
+         * Support for OpenMode::TRUNC
+
+         */
+
+        let node_id =
+            if mpath.len() == 0 {
+                NODE_ID_ROOT
+            } else {
+                let dirname = &mpath[..(mpath.len() - 1)];
+                let filename = mpath[mpath.len() - 1];
+
+                let dir = match mount.filesystem.lookup_path(dirname) {
+                    Ok(Some(node_id)) => node_id,
+                    Ok(None) => return Err(format!("File not found: {:?}", path)),
+                    Err(m) => return Err(m),
+                };
+
+                match mount.filesystem.lookup(dir, filename) {
+                    Ok(Some(node_id)) => node_id,
+                    Err(m) => return Err(m),
+                    Ok(None) => {
+                        if mode.all(OpenMode::CREATE) {
+                            match mount.filesystem.create(
+                                dir,
+                                &DEntry {
+                                    name: String::from(filename),
+                                    ntype: NodeType::RegularFile,
+                                })
+                            {
+                                Ok(node_id) => node_id,
+                                Err(m) => return Err(m),
+                            }
+                        } else {
+                            return Err(format!("File not found: {:?}", path))
+                        }
+                    },
+                }
+            };
+
+        let mount_id = mount.id; // mount, *self borrow ends here
+
+        let fd = self.next_fd;
+        self.next_fd += 1;
+
+        let file = OpenedFile {
+            mount_id,
+            node_id,
+            pos: 0,
+        };
+
+        self.opened_files.insert(fd, file);
+
+        Ok(fd)
     }
 
-    // fn create_dir(&self, parent: &str, name: &str) -> Result<(), String> {
-    //     let (mount, mpath) = match self.find_mount(parent) {
-    //         Ok(r) => r,
-    //         Err(m) => return Err(m),
-    //     };
-    //     mount.filesystem.create_dir(mpath.as_slice(), name)
-    // }
+    fn read(&mut self, fd: FileDescriptor, data: &mut [u8]) -> Result<usize, String> {
+        /* TODO: OpenMode permission check */
+
+        let file =
+            match self.opened_files.get_mut(&fd) {
+                Some(f) => f,
+                None => return Err(format!("Invalid file descriptor: {}", fd)),
+            };
+
+        let mount =
+            match self.mount.iter_mut().find(|m| m.id == file.mount_id) {
+                Some(m) => m,
+                None => return Err(format!("Invalid mount id: {}", file.mount_id)),
+            };
+
+        match mount.filesystem.read(file.node_id, file.pos, data) {
+            Ok(size) => {
+                file.pos += size;
+                Ok(size)
+            },
+            Err(m) => Err(m),
+        }
+    }
+
+    fn write(&mut self, fd: FileDescriptor, data: &[u8]) -> Result<usize, String> {
+        /* TODO: OpenMode permission check */
+
+        let file =
+            match self.opened_files.get_mut(&fd) {
+                Some(f) => f,
+                None => return Err(format!("Invalid file descriptor: {}", fd)),
+            };
+
+        let mount =
+            match self.mount.iter_mut().find(|m| m.id == file.mount_id) {
+                Some(m) => m,
+                None => return Err(format!("Invalid mount id: {}", file.mount_id)),
+            };
+
+        match mount.filesystem.write(file.node_id, file.pos, data) {
+            Ok(size) => {
+                file.pos += size;
+                Ok(size)
+            },
+            Err(m) => Err(m),
+        }
+    }
+
+    fn close(&mut self, fd: FileDescriptor) -> Result<(), String> {
+        match self.opened_files.remove(&fd) {
+            Some(f) => f,
+            None => return Err(format!("Invalid file descriptor: {}", fd)),
+        };
+        Ok(())
+    }
+
+    fn mkdir(&mut self, path: &str) -> Result<(), String> {
+        let (mount, mpath) = match self.find_mount_by_path_mut(path) {
+            Ok(r) => r,
+            Err(m) => return Err(m),
+        };
+
+        if mpath.len() == 0 {
+            return Err(format!("Directory exists: {}", path));
+        }
+
+        let parent_name = &mpath[..(mpath.len() - 1)];
+        let create_name = mpath[mpath.len() - 1];
+
+        let dir = match mount.filesystem.lookup_path(parent_name) {
+            Ok(Some(node_id)) => node_id,
+            Ok(None) => return Err(format!("Directory not found: {:?}", path)),
+            Err(m) => return Err(m),
+        };
+
+        match mount.filesystem.lookup(dir, create_name) {
+            Ok(Some(_)) => Err(format!("Path exists: {}", path)),
+            Err(m) => Err(m),
+            Ok(None) => {
+                match mount.filesystem.create(
+                    dir,
+                    &DEntry {
+                        name: String::from(create_name),
+                        ntype: NodeType::Directory,
+                    })
+                {
+                    Ok(_) => Ok(()),
+                    Err(m) => Err(m),
+                }
+            }
+        }
+    }
 }
 
 static mut VFS: Vfs = Vfs::new();
@@ -139,13 +293,25 @@ pub unsafe fn init() {
     VFS.init();
 }
 
-// pub unsafe fn read_dir(path: &str) -> Result<DirIterator, String> {
-//     VFS.read_dir(path)
-// }
+pub unsafe fn open(path: &str, mode: OpenMode) -> Result<FileDescriptor, String> {
+    VFS.open(path, mode)
+}
 
-// pub unsafe fn create_dir(parent: &str, name: &str) -> Result<(), String> {
-//     VFS.create_dir(parent, name)
-// }
+pub unsafe fn read(fd: FileDescriptor, data: &mut [u8]) -> Result<usize, String> {
+    VFS.read(fd, data)
+}
+
+pub unsafe fn write(fd: FileDescriptor, data: &[u8]) -> Result<usize, String> {
+    VFS.write(fd, data)
+}
+
+pub unsafe fn close(fd: FileDescriptor) -> Result<(), String> {
+    VFS.close(fd)
+}
+
+pub unsafe fn mkdir(path: &str) -> Result<(), String> {
+    VFS.mkdir(path)
+}
 
 #[cfg(test)]
 mod tests {

@@ -45,7 +45,7 @@ impl RamFs {
 }
 
 impl crate::FileSystem for RamFs {
-    fn read_dir(&self, dir: NodeId, pos: usize) -> Result<Option<DEntry>, String> {
+    fn read_dir(&self, dir: NodeId, pos: usize) -> Result<Option<(DEntry, NodeId)>, String> {
         let dir_node = match self.fsnodes.get(&dir) {
             Some(n) => n,
             None => return Err(format!("Node not found (maybe a bug): id={}", dir)),
@@ -62,15 +62,18 @@ impl crate::FileSystem for RamFs {
                 Some(n) => n,
                 None => return Err(format!("Node not found (maybe a bug): id={}", dir_node.id)),
             };
-            Ok(Some(DEntry {
-                name: dir_node.name.to_owned(),
-                ntype: node.ntype,
-            }))
+            Ok(Some((
+                DEntry {
+                    name: fsnode.name.to_owned(),
+                    ntype: fsnode.ntype,
+                },
+                fsnode.id,
+            )))
         }
     }
 
     fn create(&mut self, dir: NodeId, dent: &DEntry) -> Result<NodeId, String> {
-        let dir_node = match self.fsnodes.get(&dir) {
+        let dir_node = match self.fsnodes.get_mut(&dir) {
             Some(n) => n,
             None => return Err(format!("Node not found (maybe a bug): id={}", dir)),
         };
@@ -90,8 +93,8 @@ impl crate::FileSystem for RamFs {
             file_body: Vec::new(),
         };
 
-        self.fsnodes.insert(node_id, newnode);
         dir_node.children.push(node_id);
+        self.fsnodes.insert(node_id, newnode);
 
         Ok(node_id)
     }
