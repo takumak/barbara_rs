@@ -306,6 +306,23 @@ impl Vfs {
             }
         }
     }
+
+    fn readdir(&mut self, fd: FileDescriptor) -> Result<Option<DEntry>, String> {
+        let (file, mount) =
+            match self.get_file_mount_from_fd(fd) {
+                Ok((file, mount)) => (file, mount),
+                Err(m) => return Err(m),
+            };
+
+        match mount.filesystem.readdir(file.node_id, file.pos) {
+            Ok(Some((dent, _))) => {
+                file.pos += 1;
+                Ok(Some(dent))
+            },
+            Ok(None) => Ok(None),
+            Err(m) => Err(m),
+        }
+    }
 }
 
 static mut VFS: Vfs = Vfs::new();
@@ -332,6 +349,10 @@ pub unsafe fn close(fd: FileDescriptor) -> Result<(), String> {
 
 pub unsafe fn mkdir(path: &str) -> Result<(), String> {
     VFS.mkdir(path)
+}
+
+pub unsafe fn readdir(fd: FileDescriptor) -> Result<Option<DEntry>, String> {
+    VFS.readdir(fd)
 }
 
 #[cfg(test)]
@@ -576,5 +597,27 @@ mod tests {
         let len = vfs.read(fd, &mut buf).unwrap();
         vfs.close(fd).unwrap();
         assert_eq!(buf[..len], *"/hoge/foo.txt".as_bytes());
+    }
+
+    #[test]
+    fn readdir() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::CREATE).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/bar.txt", OpenMode::CREATE).unwrap();
+        vfs.close(fd).unwrap();
+
+        // validate
+
+        let fd = vfs.open("/", OpenMode::READ).unwrap();
+        let mut files = vec![];
+        while let Some(dent) = vfs.readdir(fd).unwrap() {
+            files.push(dent.name);
+        }
+        files.sort_unstable();
+        assert_eq!(files, ["bar.txt", "foo.txt"])
     }
 }
