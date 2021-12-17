@@ -30,10 +30,6 @@ macro_rules! bitfield {
                 (self.0 & m.0) == m.0
             }
 
-            fn any(&self, m: $stname) -> bool {
-                (self.0 & m.0) != 0
-            }
-
             fn extract(&self, m: $stname) -> $typ {
                 (self.0 & m.0) >> m.0.trailing_zeros()
             }
@@ -176,11 +172,6 @@ mod tests {
         assert_eq!(mode.all(OpenMode::READ |
                             OpenMode::WRITE |
                             OpenMode::CREATE), true);
-
-        assert_eq!(mode.any(OpenMode::READ |
-                            OpenMode::WRITE |
-                            OpenMode::CREATE |
-                            OpenMode::APPEND), true);
 
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 0);
