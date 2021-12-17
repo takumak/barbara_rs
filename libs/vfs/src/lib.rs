@@ -129,6 +129,24 @@ impl Vfs {
         Ok((mount, mpath))
     }
 
+    fn get_file_mount_from_fd(&mut self, fd: FileDescriptor) ->
+        Result<(&mut OpenedFile, &mut Mount), String>
+    {
+        let file =
+            match self.opened_files.get_mut(&fd) {
+                Some(f) => f,
+                None => return Err(format!("Invalid file descriptor: {}", fd)),
+            };
+
+        let mount =
+            match self.mount.iter_mut().find(|m| m.id == file.mount_id) {
+                Some(m) => m,
+                None => return Err(format!("Invalid mount id: {}", file.mount_id)),
+            };
+
+        Ok((file, mount))
+    }
+
     fn open(&mut self, path: &str, mode: OpenMode) -> Result<FileDescriptor, String> {
         let (mount, mpath) = match self.find_mount_by_path_mut(path) {
             Ok(r) => r,
@@ -197,16 +215,10 @@ impl Vfs {
     fn read(&mut self, fd: FileDescriptor, data: &mut [u8]) -> Result<usize, String> {
         /* TODO: OpenMode permission check */
 
-        let file =
-            match self.opened_files.get_mut(&fd) {
-                Some(f) => f,
-                None => return Err(format!("Invalid file descriptor: {}", fd)),
-            };
-
-        let mount =
-            match self.mount.iter_mut().find(|m| m.id == file.mount_id) {
-                Some(m) => m,
-                None => return Err(format!("Invalid mount id: {}", file.mount_id)),
+        let (file, mount) =
+            match self.get_file_mount_from_fd(fd) {
+                Ok((file, mount)) => (file, mount),
+                Err(m) => return Err(m),
             };
 
         match mount.filesystem.read(file.node_id, file.pos, data) {
@@ -221,16 +233,10 @@ impl Vfs {
     fn write(&mut self, fd: FileDescriptor, data: &[u8]) -> Result<usize, String> {
         /* TODO: OpenMode permission check */
 
-        let file =
-            match self.opened_files.get_mut(&fd) {
-                Some(f) => f,
-                None => return Err(format!("Invalid file descriptor: {}", fd)),
-            };
-
-        let mount =
-            match self.mount.iter_mut().find(|m| m.id == file.mount_id) {
-                Some(m) => m,
-                None => return Err(format!("Invalid mount id: {}", file.mount_id)),
+        let (file, mount) =
+            match self.get_file_mount_from_fd(fd) {
+                Ok((file, mount)) => (file, mount),
+                Err(m) => return Err(m),
             };
 
         match mount.filesystem.write(file.node_id, file.pos, data) {
