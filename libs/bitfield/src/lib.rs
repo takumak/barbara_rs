@@ -1,3 +1,4 @@
+#![cfg_attr(not(test), no_std)]
 #![feature(const_generics_defaults)]
 #![feature(fn_traits)]
 #![feature(unboxed_closures)]
