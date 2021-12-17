@@ -145,10 +145,3 @@ impl crate::FileSystem for RamFs {
         Ok(data.len())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test1() {
-    }
-}
