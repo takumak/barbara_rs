@@ -1,4 +1,4 @@
-# mps2-an521 'Hello world' DEMO in Rust
+# Cortex-M 'Hello world' demo in Rust
 
 ## How to run
 
