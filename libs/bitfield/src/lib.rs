@@ -21,10 +21,7 @@ macro_rules! bitfield {
         bitfield!{@field $stname, $typ { $($remain)* }}
     };
 
-    {$stname:ident : $typ:ty { $($body:tt)* }} => {
-        #[derive(Clone, Copy)]
-        struct $stname($typ);
-
+    {@impl $stname:ident, $typ:ty { $($body:tt)* }} => {
         impl $stname {
             bitfield!{@field $stname, $typ {$($body)*}}
 
@@ -99,6 +96,18 @@ macro_rules! bitfield {
                 self.compose(v)
             }
         }
+    };
+
+    {$stname:ident : $typ:ty { $($body:tt)* }} => {
+        #[derive(Clone, Copy)]
+        struct $stname($typ);
+        bitfield!{@impl $stname, $typ { $($body)* }}
+    };
+
+    {pub $stname:ident : $typ:ty { $($body:tt)* }} => {
+        #[derive(Clone, Copy)]
+        pub struct $stname($typ);
+        bitfield!{@impl $stname, $typ { $($body)* }}
     };
 
 }
