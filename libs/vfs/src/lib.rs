@@ -336,7 +336,10 @@ pub unsafe fn mkdir(path: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Vfs;
+    use crate::{
+        OpenMode,
+        Vfs,
+    };
 
     #[test]
     fn parse_path() {
@@ -354,5 +357,194 @@ mod tests {
         assert_eq!(Vfs::parse_path("/foo/.."), Ok(vec![]));
         assert_eq!(Vfs::parse_path("/foo/../.."), Ok(vec![]));
         assert_eq!(Vfs::parse_path("/.."), Ok(vec![]));
+    }
+
+    #[test]
+    fn write_read() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "foo\n".as_bytes()).unwrap();
+        vfs.write(fd, "bar\n".as_bytes()).unwrap();
+        vfs.write(fd, "baz\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        let len = vfs.read(fd, &mut buf).unwrap();
+        vfs.close(fd).unwrap();
+
+        assert_eq!(buf[..len], *"foo\nbar\nbaz\n".as_bytes());
+    }
+
+    #[test]
+    fn not_found() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        if vfs.open("/foo.txt", OpenMode::WRITE).is_ok() {
+            panic!("open() unexpectedly succeed")
+        }
+
+        if vfs.open("/foo.txt", OpenMode::READ).is_ok() {
+            panic!("open() unexpectedly succeed")
+        }
+    }
+
+    #[test]
+    fn read_and_write_shoud_share_file_position() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "foo\n".as_bytes()).unwrap();
+        vfs.write(fd, "bar\n".as_bytes()).unwrap();
+        vfs.write(fd, "baz\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ | OpenMode::WRITE).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        let mut pos: usize = 0;
+        pos += vfs.read(fd, &mut buf[pos..(pos+4)]).unwrap();
+        vfs.write(fd, "***\n".as_bytes()).unwrap();
+        pos += vfs.read(fd, &mut buf[pos..(pos+4)]).unwrap();
+        vfs.close(fd).unwrap();
+
+        assert_eq!(buf[..pos], *"foo\nbaz\n".as_bytes());
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        let len = vfs.read(fd, &mut buf).unwrap();
+        vfs.close(fd).unwrap();
+
+        assert_eq!(buf[..len], *"foo\n***\nbaz\n".as_bytes());
+    }
+
+    #[test]
+    fn permission_read_file() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "foo\n".as_bytes()).unwrap();
+        vfs.write(fd, "bar\n".as_bytes()).unwrap();
+        vfs.write(fd, "baz\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+
+        assert!(vfs.read(fd, &mut buf).is_err(),
+                "OpenMode permission violating read() request unexpectedly succeed");
+    }
+
+    #[test]
+    fn permission_write_file() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "foo\n".as_bytes()).unwrap();
+        vfs.write(fd, "bar\n".as_bytes()).unwrap();
+        vfs.write(fd, "baz\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
+
+        assert!(vfs.write(fd, "a".as_bytes()).is_err(),
+                "OpenMode permission violating write() request unexpectedly succeed");
+    }
+
+    #[test]
+    fn write_overwrite() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "foo\n".as_bytes()).unwrap();
+        vfs.write(fd, "bar\n".as_bytes()).unwrap();
+        vfs.write(fd, "baz\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE).unwrap();
+        vfs.write(fd, "***\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        let len = vfs.read(fd, &mut buf).unwrap();
+        vfs.close(fd).unwrap();
+
+        assert_eq!(buf[..len], *"***\nbar\nbaz\n".as_bytes());
+    }
+
+    #[test]
+    fn trunc() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "foo\n".as_bytes()).unwrap();
+        vfs.write(fd, "bar\n".as_bytes()).unwrap();
+        vfs.write(fd, "baz\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::TRUNC).unwrap();
+        vfs.write(fd, "***\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        let len = vfs.read(fd, &mut buf).unwrap();
+        vfs.close(fd).unwrap();
+
+        assert_eq!(buf[..len], *"***\n".as_bytes());
+    }
+
+    #[test]
+    fn prefer_trunc_than_append() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "foo\n".as_bytes()).unwrap();
+        vfs.write(fd, "bar\n".as_bytes()).unwrap();
+        vfs.write(fd, "baz\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::TRUNC | OpenMode::APPEND).unwrap();
+        vfs.write(fd, "***\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        let len = vfs.read(fd, &mut buf).unwrap();
+        vfs.close(fd).unwrap();
+
+        assert_eq!(buf[..len], *"***\n".as_bytes());
+    }
+
+    #[test]
+    fn append() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "foo\n".as_bytes()).unwrap();
+        vfs.write(fd, "bar\n".as_bytes()).unwrap();
+        vfs.write(fd, "baz\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::APPEND).unwrap();
+        vfs.write(fd, "***\n".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        let len = vfs.read(fd, &mut buf).unwrap();
+        vfs.close(fd).unwrap();
+
+        assert_eq!(buf[..len], *"foo\nbar\nbaz\n***\n".as_bytes());
     }
 }
