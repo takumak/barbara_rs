@@ -8,5 +8,5 @@ cargo_toml = "0.10"
 
 [dependencies.clap]
 git = "https://github.com/clap-rs/clap.git"
-rev = "v3.0.0-rc.1"
+rev = "v3.0.0-rc.7"
 features = ["derive"]
