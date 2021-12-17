@@ -116,8 +116,9 @@ impl Vfs {
             Err(m) => return Err(m),
         };
         let mut mount: Option<&'a mut Mount> = None;
-        for m in self.mount.iter_mut().rev() {
-            if path.iter().map(|s| *s).eq(m.mountpoint.iter().map(|s| s.as_str())) {
+        for m in self.mount.iter_mut() {
+            if path.iter().take(m.mountpoint.len()).map(|s| *s).eq(
+                m.mountpoint.iter().map(|s| s.as_str())) {
                 mount = Some(m);
                 break;
             }
