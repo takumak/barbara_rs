@@ -1,6 +1,7 @@
-use std::process;
+use std::{env, fs, process};
 
-extern crate cargo_toml;
+extern crate serde;
+extern crate serde_json;
 
 extern crate clap;
 use clap::{Parser, Subcommand};
@@ -33,25 +34,168 @@ fn cargo_target(cmd: &str, args: &Vec<String>) {
     args_all.extend(args.iter().map(|s| &**s));
 
     let mut cargo = process::Command::new("cargo");
-    cargo.args(args_all);
-    cargo.env("RUSTFLAGS", "-C link-arg=-Tlink.x -C force-frame-pointers=y");
+    cargo
+        .args(args_all)
+        .env("RUSTFLAGS", "-C link-arg=-Tlink.x -C force-frame-pointers=y");
 
-    let status = cargo.status().unwrap();
+    let status = cargo
+        .status()
+        .expect("failed to execute cargo process");
+
     assert!(status.success(), "failed to execute: {:?}", cargo);
 }
 
+#[derive(serde::Deserialize, Debug)]
+struct CompilerMessage {
+    reason: String,
+    executable: Option<String>,
+    target: Option<Target>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct Target {
+    name: String,
+}
+
 fn cargo_testall(args: &Vec<String>) {
+
+    /* Remove previously generated coverage data */
+
+    let cov_dir = env::current_dir().unwrap().join("cov");
+    if !cov_dir.exists() {
+        fs::create_dir(&cov_dir).unwrap();
+    }
+
+    let profraw_files =
+        |cov_dir: &std::path::PathBuf| cov_dir.read_dir().unwrap()
+        .filter(|e| e.is_ok())
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.to_str().unwrap_or("").ends_with(".profraw"));
+
+    for p in profraw_files(&cov_dir) {
+        fs::remove_file(p).unwrap();
+    }
+
+    let profdata = cov_dir.join("json5format.profdata");
+    if profdata.exists() {
+        fs::remove_file(profdata).unwrap();
+    }
+
+    /* Build test programs */
+
     let mut args_all = vec![
         "test",
-        "--tests",
+        "--workspace",
+        "--lib",
+        "--no-run",
+        "--message-format", "json",
     ];
     args_all.extend(args.iter().map(|s| &**s));
 
     let mut cargo = process::Command::new("cargo");
-    cargo.args(args_all);
-    // cargo.env("RUST_BACKTRACE", "1");
+    let mut child = cargo
+        .args(args_all)
+        .env("RUSTFLAGS", "-Zinstrument-coverage")
+        .stdout(process::Stdio::piped())
+        .spawn()
+        .expect("failed to spawn cargo command");
 
-    let status = cargo.status().unwrap();
+    let reader = child.stdout.take().unwrap();
+    let deserializer = serde_json::Deserializer::from_reader(reader);
+    let mut test_progs: Vec<(String, String)> = Vec::new();
+
+    for msg in deserializer.into_iter::<CompilerMessage>() {
+        let msg = msg.unwrap();
+        if msg.reason == "compiler-artifact" && msg.executable.is_some() {
+            let name =
+                match msg.target {
+                    Some(t) => t.name,
+                    None => String::from("????"),
+                };
+            test_progs.push((
+                name,
+                msg.executable.unwrap(),
+            ));
+        }
+    }
+
+    let status = child
+        .wait()
+        .expect("wait failed");
+
+    assert!(status.success(), "failed to execute: {:?}", cargo);
+
+    /* Run test programs */
+
+    for (name, prog) in test_progs.iter() {
+        let mut cmd = process::Command::new(prog);
+
+        println!("**** {} ****", name);
+
+        cmd.env("LLVM_PROFILE_FILE",
+                format!("{}/json5format-%m.profraw",
+                        cov_dir.to_str().unwrap_or(".")));
+
+        let status = cmd
+            .status()
+            .expect("failed to execute cargo process");
+
+        assert!(status.success(), "failed to execute: {:?}", cargo);
+    }
+
+    // merge coverage report
+
+    let mut args: Vec<String> = vec![
+        "profdata", "--",
+        "merge",
+        "--sparse",
+        "-o",
+        "json5format.profdata",
+    ].iter().map(|&s| s.into()).collect();
+    for p in profraw_files(&cov_dir) {
+        args.push(p.to_str().unwrap().to_owned());
+    }
+    let mut cargo = process::Command::new("cargo");
+    cargo
+        .current_dir(&cov_dir)
+        .args(args);
+
+    let status = cargo
+        .status()
+        .expect("failed to execute cargo process");
+
+    assert!(status.success(), "failed to execute: {:?}", cargo);
+
+    // generate coverage report
+
+    let mut args: Vec<String> = vec![
+        "cov", "--",
+        "show",
+        "--ignore-filename-regex=/.cargo/registry",
+        "--ignore-filename-regex=/library/std/",
+        "--instr-profile=json5format.profdata",
+        "--show-instantiations",
+        "--show-line-counts-or-regions",
+        "--Xdemangler=rustfilt",
+        "--format=html",
+    ].iter().map(|&s| s.into()).collect();
+    for (_, prog) in test_progs.iter() {
+        args.push("--object".into());
+        args.push(prog.clone());
+    }
+
+    let mut cargo = process::Command::new("cargo");
+    cargo
+        .current_dir(&cov_dir)
+        .stdout(fs::File::create(cov_dir.join("coverage.html")).unwrap())
+        .args(args);
+
+    println!("Run: {:?}", cargo);
+
+    let status = cargo
+        .status()
+        .expect("failed to execute cargo process");
+
     assert!(status.success(), "failed to execute: {:?}", cargo);
 }
 
@@ -66,21 +210,7 @@ fn main() {
             cargo_target("build", args)
         }
         Some(Commands::Testall { args }) => {
-            let manifest = cargo_toml::Manifest::from_path("Cargo.toml").unwrap();
-            let workspace = manifest.workspace.unwrap();
-            let test_packages: Vec<String> =
-                workspace.members.iter().filter(|&s| s != "xtask")
-                .map(|s| s.to_owned()).collect();
-            println!("All packages: {:?}", workspace.members);
-            println!("Test packages: {:?}", test_packages);
-
-            let mut new_args: Vec<String> = Vec::new();
-            for p in test_packages {
-                new_args.push("-p".into());
-                new_args.push(p.as_str().split('/').last().unwrap().into());
-            }
-            new_args.extend(args.iter().cloned());
-            cargo_testall(&new_args);
+            cargo_testall(args);
         }
         None => {}
     }
