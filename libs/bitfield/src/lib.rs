@@ -92,6 +92,7 @@ mod tests {
         assert_eq!(mode.is_set(OpenMode::APPEND), false);
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 0);
+        assert_eq!(u32::from(mode), 1);
     }
 
     #[test]
@@ -103,6 +104,7 @@ mod tests {
         assert_eq!(mode.is_set(OpenMode::APPEND), false);
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 0);
+        assert_eq!(u32::from(mode), 2);
     }
 
     #[test]
@@ -124,6 +126,8 @@ mod tests {
 
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 0);
+
+        assert_eq!(u32::from(mode), 7);
     }
 
     #[test]
@@ -135,6 +139,28 @@ mod tests {
         assert_eq!(mode.is_set(OpenMode::APPEND), false);
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 7);
+        assert_eq!(u32::from(mode), (7 << 5) | 4);
     }
 
+    #[test]
+    fn test_convert1() {
+        let mode: OpenMode = 0xa1.into();
+        assert_eq!(mode.is_set(OpenMode::READ), true);
+        assert_eq!(mode.is_set(OpenMode::WRITE), false);
+        assert_eq!(mode.is_set(OpenMode::CREATE), false);
+        assert_eq!(mode.is_set(OpenMode::APPEND), false);
+        assert_eq!(mode.extract(OpenMode::NUM1), 0);
+        assert_eq!(mode.extract(OpenMode::NUM3), 5);
+    }
+
+    #[test]
+    fn test_convert2() {
+        let mode: u32 = OpenMode::from(0xff).into();
+        assert_eq!(mode, 0xff);
+    }
+
+    #[test]
+    fn test_debug() {
+        assert_eq!(format!("{:?}", OpenMode::READ), "OpenMode(1)");
+    }
 }
