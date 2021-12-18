@@ -360,13 +360,11 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        if vfs.open("/foo.txt", OpenMode::WRITE).is_ok() {
-            panic!("open() unexpectedly succeed")
-        }
+        vfs.open("/foo.txt", OpenMode::WRITE)
+            .expect_err("open() for a non-exist file unexpectedly succeed");
 
-        if vfs.open("/foo.txt", OpenMode::READ).is_ok() {
-            panic!("open() unexpectedly succeed")
-        }
+        vfs.open("/foo.txt", OpenMode::READ)
+            .expect_err("open() for a non-exist file unexpectedly succeed");
     }
 
     #[test]
@@ -412,8 +410,8 @@ mod tests {
         let fd = vfs.open("/foo.txt", OpenMode::WRITE).unwrap();
         let mut buf: [u8; 30] = [0; 30];
 
-        assert!(vfs.read(fd, &mut buf).is_err(),
-                "OpenMode permission violating read() request unexpectedly succeed");
+        vfs.read(fd, &mut buf)
+            .expect_err("OpenMode permission violating read() request unexpectedly succeed");
     }
 
     #[test]
@@ -429,8 +427,8 @@ mod tests {
 
         let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
 
-        assert!(vfs.write(fd, "a".as_bytes()).is_err(),
-                "OpenMode permission violating write() request unexpectedly succeed");
+        vfs.write(fd, "a".as_bytes())
+            .expect_err("OpenMode permission violating write() request unexpectedly succeed");
     }
 
     #[test]
