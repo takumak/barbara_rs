@@ -574,4 +574,63 @@ mod tests {
         files.sort_unstable();
         assert_eq!(files, ["bar.txt", "foo.txt"])
     }
+
+    #[test]
+    fn openmode_clone() {
+        assert_eq!(OpenMode::CREATE, OpenMode::CREATE.clone());
+    }
+
+    #[test]
+    fn openmode_debug() {
+        assert_eq!(format!("{:?}", OpenMode::CREATE), "OpenMode(4)");
+    }
+
+    #[test]
+    fn mount_nonroot_for_1st_time() {
+        let mut vfs = Vfs::new();
+        let r = vfs.mount("/foo", Box::new(RamFs::new()));
+        r.expect_err("Non-root mount for the 1st time unexpectedly succeed");
+    }
+
+    #[test]
+    fn mount_on_nonempty_dir() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        vfs.mkdir("/foo").unwrap();
+        vfs.mkdir("/foo/bar").unwrap();
+
+        let r = vfs.mount("/foo", Box::new(RamFs::new()));
+        r.expect_err("Mount for a non-empty directory unexpectedly succeed");
+    }
+
+    #[test]
+    fn mountpoint_not_exist() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        vfs.mount("/foo", Box::new(RamFs::new()))
+            .expect_err("Mount on non-exist mountpoint unexpectedly succeed");
+    }
+
+    #[test]
+    fn non_root_mount() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        vfs.mkdir("/foo").unwrap();
+        vfs.mount("/foo", Box::new(RamFs::new())).unwrap();
+    }
+
+    #[test]
+    fn mount_on_file() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo", OpenMode::CREATE).unwrap();
+        vfs.close(fd).unwrap();
+
+        vfs.mount("/foo", Box::new(RamFs::new()))
+            .expect_err("Mount on a file unexpectedly succeed");
+    }
 }
