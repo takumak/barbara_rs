@@ -268,4 +268,22 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn small_buffer() {
+        let data = make_kallsyms_data(
+            &[
+                "test_function2",
+            ],
+            &[
+                (0x2000, &["test_function2"]),
+            ]
+        );
+
+        let kallsyms = crate::KAllSyms::new(data.as_ptr() as usize);
+        let mut namebuf: [u8; 8] = [0; 8];
+
+        assert_eq!(kallsyms.safe_search(0x2000, &mut namebuf),
+                   Some(("test_fun", 0usize)));
+    }
 }
