@@ -119,7 +119,7 @@ impl Vfs {
     }
 
     fn find_mount_by_path_mut<'a, 'b>(&'a mut self, path: &'b str) ->
-        Result<(&'a mut Mount, Vec<&'b str>), String>
+        (&'a mut Mount, Vec<&'b str>)
     {
         let path: Vec<&'b str> = Self::parse_path(path);
         let mut mount: Option<&'a mut Mount> = None;
@@ -133,7 +133,7 @@ impl Vfs {
         assert!(mount.is_some());
         let mount = mount.unwrap();
         let mpath = Vec::from(&path[mount.mountpoint.len()..]);
-        Ok((mount, mpath))
+        (mount, mpath)
     }
 
     fn get_file_mount_from_fd(&mut self, fd: FileDescriptor) ->
@@ -149,7 +149,7 @@ impl Vfs {
     }
 
     fn open(&mut self, path: &str, mode: OpenMode) -> Result<FileDescriptor, String> {
-        let (mount, mpath) = self.find_mount_by_path_mut(path)?;
+        let (mount, mpath) = self.find_mount_by_path_mut(path);
 
         let node_id =
             if mpath.len() == 0 {
@@ -235,7 +235,7 @@ impl Vfs {
     }
 
     fn mkdir(&mut self, path: &str) -> Result<(), String> {
-        let (mount, mpath) = self.find_mount_by_path_mut(path)?;
+        let (mount, mpath) = self.find_mount_by_path_mut(path);
 
         if mpath.len() == 0 {
             return Err(format!("Directory exists: {}", path));
