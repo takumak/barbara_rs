@@ -166,7 +166,7 @@ fn cargo_testall(args: &Vec<String>) {
 
     assert!(status.success(), "failed to execute: {:?}", cargo);
 
-    // generate coverage report
+    // generate coverage report HTML
 
     let mut args: Vec<String> = vec![
         "cov", "--",
@@ -196,6 +196,33 @@ fn cargo_testall(args: &Vec<String>) {
         .status()
         .expect("failed to execute cargo process");
 
+    assert!(status.success(), "failed to execute: {:?}", cargo);
+
+    // show coverage summary
+
+    let mut args: Vec<String> = vec![
+        "cov", "--",
+        "report",
+        "--use-color",
+        "--ignore-filename-regex=/.cargo/registry",
+        "--ignore-filename-regex=/library/std/",
+        "--instr-profile=json5format.profdata",
+    ].iter().map(|&s| s.into()).collect();
+    for (_, prog) in test_progs.iter() {
+        args.push("--object".into());
+        args.push(prog.clone());
+    }
+
+    let mut cargo = process::Command::new("cargo");
+    cargo
+        .current_dir(&cov_dir)
+        .args(args);
+
+    println!("Run: {:?}", cargo);
+
+    let status = cargo
+        .status()
+        .expect("failed to execute cargo process");
     assert!(status.success(), "failed to execute: {:?}", cargo);
 }
 
