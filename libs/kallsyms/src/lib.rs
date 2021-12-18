@@ -255,4 +255,17 @@ mod tests {
         assert_eq!(kallsyms.safe_search(0x1000, &mut namebuf),
                    None);
     }
+
+    #[test]
+    #[should_panic]
+    fn token_not_found() {
+        make_kallsyms_data(
+            &[
+                "test_function",
+            ],
+            &[
+                (0x3000, &["test_function1"]),
+            ]
+        );
+    }
 }
