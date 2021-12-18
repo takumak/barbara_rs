@@ -3,7 +3,7 @@
 use core::{
     alloc::GlobalAlloc,
     cell::UnsafeCell,
-    mem::{align_of, size_of},
+    mem::size_of,
     ptr,
 };
 extern crate alloc;
@@ -32,14 +32,9 @@ struct Area {
 
 impl Area {
     const fn size_align() -> usize {
-        let header_size = align_up(align_of::<Self>(),
-                                   size_of::<Self>());
+        let header_size = size_of::<Self>();
         let p2 = 1 << (usize::BITS - header_size.leading_zeros() - 1);
-        if p2 < header_size {
-            p2 << 1
-        } else {
-            p2
-        }
+        align_up(p2, header_size)
     }
 
     fn addr(&self) -> usize {
