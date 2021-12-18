@@ -416,10 +416,20 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn before_init() {
+    fn before_init_1() {
         let heap = LinkedListAllocator::new();
         unsafe {
             heap.__alloc(0x1000);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn before_init_2() {
+        let heap = LinkedListAllocator::new();
+        let buf: [u8; 0x10] = [0; 0x10];
+        unsafe {
+            heap.__dealloc(buf.as_ptr() as usize as *mut u8, 0x10);
         }
     }
 
@@ -491,5 +501,30 @@ mod tests {
         }
 
         assert!(heap.total_free() == total_free);
+    }
+
+    #[test]
+    #[should_panic]
+    fn invalid_address() {
+        let mut allocator = LinkedListAllocator::new();
+        let buf: [u8; 0x1000] = [0; 0x1000];
+        allocator.init(buf.as_ptr() as usize, buf.as_ptr() as usize);
+    }
+
+    #[test]
+    #[should_panic]
+    fn region_size_1() {
+        let mut allocator = LinkedListAllocator::new();
+        let buf: [u8; 0x1000] = [0; 0x1000];
+        let addr:usize = buf.as_ptr() as usize;
+        allocator.init(addr, addr + (core::mem::size_of::<usize>() * 2 * 99));
+    }
+
+    #[test]
+    fn region_size_2() {
+        let mut allocator = LinkedListAllocator::new();
+        let buf: [u8; 0x1000] = [0; 0x1000];
+        let addr:usize = buf.as_ptr() as usize;
+        allocator.init(addr, addr + (core::mem::size_of::<usize>() * 2 * 100));
     }
 }
