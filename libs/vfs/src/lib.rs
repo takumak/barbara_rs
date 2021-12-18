@@ -114,9 +114,8 @@ impl Vfs {
     }
 
     fn init(&mut self) {
-        if let Err(m) = self.mount("/", Box::new(RamFs::new())) {
-            panic!("Failed to mount root: {}", m)
-        }
+        self.mount("/", Box::new(RamFs::new()))
+            .expect("Failed to mount root");
     }
 
     fn find_mount_by_path_mut<'a, 'b>(&'a mut self, path: &'b str) ->
