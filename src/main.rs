@@ -6,7 +6,6 @@
 #![feature(linkage)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
-#![feature(const_generics_defaults)]
 #![feature(fn_traits)]
 #![feature(unboxed_closures)]
 
