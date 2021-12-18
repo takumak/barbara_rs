@@ -67,7 +67,7 @@ impl KAllSyms {
             let token = self.nth_token(*tok_i);
             let wlen = min(buf.len() - buf_i, token.len());
             buf[buf_i..(buf_i + wlen)].copy_from_slice(&token[..wlen]);
-            buf_i += token.len();
+            buf_i += wlen;
             if buf_i >= buf.len() {
                 break
             }
