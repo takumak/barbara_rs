@@ -178,6 +178,7 @@ fn cargo_testall(args: &Vec<String>) {
         "--show-line-counts-or-regions",
         "--Xdemangler=rustfilt",
         "--format=html",
+        "--output-dir=.",
     ].iter().map(|&s| s.into()).collect();
     for (_, prog) in test_progs.iter() {
         args.push("--object".into());
@@ -187,7 +188,6 @@ fn cargo_testall(args: &Vec<String>) {
     let mut cargo = process::Command::new("cargo");
     cargo
         .current_dir(&cov_dir)
-        .stdout(fs::File::create(cov_dir.join("coverage.html")).unwrap())
         .args(args);
 
     println!("Run: {:?}", cargo);
