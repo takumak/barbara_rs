@@ -14,6 +14,8 @@ function:
 
  */
 
+use core::arch::asm;
+
 use crate::decl_c_symbol_addr;
 decl_c_symbol_addr!(__text_s, text_s);
 decl_c_symbol_addr!(__text_e, text_e);

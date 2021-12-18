@@ -22,6 +22,8 @@ mod heap;
 use arm_uart::ArmUart;
 const __CONSOLE: *mut ArmUart = 0x4020_0000 as *mut ArmUart;
 
+use core::arch::asm;
+
 pub fn main() -> ! {
     console::init();
     println!("=========================================");
