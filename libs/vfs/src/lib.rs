@@ -139,17 +139,11 @@ impl Vfs {
     fn get_file_mount_from_fd(&mut self, fd: FileDescriptor) ->
         Result<(&mut OpenedFile, &mut Mount), String>
     {
-        let file =
-            match self.opened_files.get_mut(&fd) {
-                Some(f) => f,
-                None => return Err(format!("Invalid file descriptor: {}", fd)),
-            };
+        let file = self.opened_files.get_mut(&fd)
+            .ok_or(format!("Invalid file descriptor: {}", fd))?;
 
-        let mount =
-            match self.mount.iter_mut().find(|m| m.id == file.mount_id) {
-                Some(m) => m,
-                None => return Err(format!("Invalid mount id: {}", file.mount_id)),
-            };
+        let mount = self.mount.iter_mut().find(|m| m.id == file.mount_id)
+            .ok_or(format!("Invalid mount id: {}", file.mount_id))?;
 
         Ok((file, mount))
     }
@@ -164,10 +158,8 @@ impl Vfs {
                 let dirname = &mpath[..(mpath.len() - 1)];
                 let filename = mpath[mpath.len() - 1];
 
-                let dir = match mount.filesystem.lookup_path(dirname)? {
-                    Some(node_id) => node_id,
-                    None => return Err(format!("File not found: {:?}", path)),
-                };
+                let dir = mount.filesystem.lookup_path(dirname)?
+                    .ok_or(format!("File not found: {:?}", path))?;
 
                 match mount.filesystem.lookup(dir, filename)? {
                     Some(node_id) => node_id,
@@ -237,10 +229,9 @@ impl Vfs {
     }
 
     fn close(&mut self, fd: FileDescriptor) -> Result<(), String> {
-        match self.opened_files.remove(&fd) {
-            Some(_) => Ok(()),
-            None => Err(format!("Invalid file descriptor: {}", fd)),
-        }
+        self.opened_files.remove(&fd)
+            .ok_or(format!("Invalid file descriptor: {}", fd))?;
+        Ok(())
     }
 
     fn mkdir(&mut self, path: &str) -> Result<(), String> {
@@ -253,10 +244,8 @@ impl Vfs {
         let parent_name = &mpath[..(mpath.len() - 1)];
         let create_name = mpath[mpath.len() - 1];
 
-        let dir = match mount.filesystem.lookup_path(parent_name)? {
-            Some(node_id) => node_id,
-            None => return Err(format!("Directory not found: {:?}", path)),
-        };
+        let dir = mount.filesystem.lookup_path(parent_name)?
+            .ok_or(format!("Directory not found: {:?}", path))?;
 
         match mount.filesystem.lookup(dir, create_name)? {
             Some(_) => Err(format!("Path exists: {}", path)),
