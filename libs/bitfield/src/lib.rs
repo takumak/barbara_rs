@@ -160,6 +160,12 @@ mod tests {
     }
 
     #[test]
+    fn test_clone() {
+        let mode = OpenMode::from(0xff);
+        assert_eq!(mode, mode.clone());
+    }
+
+    #[test]
     fn test_debug() {
         assert_eq!(format!("{:?}", OpenMode::READ), "OpenMode(1)");
     }
