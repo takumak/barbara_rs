@@ -1,4 +1,5 @@
 #![cfg_attr(not(test), no_std)]
+#![feature(no_coverage)]
 
 use core::{
     alloc::GlobalAlloc,
@@ -250,10 +251,12 @@ impl LinkedListAllocator {
 unsafe impl Sync for LinkedListAllocator {}
 
 unsafe impl GlobalAlloc for LinkedListAllocator {
+    #[no_coverage]
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         self.__alloc(align_up(layout.align(), layout.size()))
     }
 
+    #[no_coverage]
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         self.__dealloc(ptr, align_up(layout.align(), layout.size()))
     }
@@ -308,6 +311,7 @@ mod tests {
             self.allocator.mem_top <= addr && addr < self.allocator.mem_end
         }
 
+        #[no_coverage]
         fn check_free_areas(&mut self, print: bool) -> bool {
             if print {
                 println!("----");
@@ -384,10 +388,12 @@ mod tests {
         }
 
         #[allow(dead_code)]
+        #[no_coverage]
         fn print_free_areas(&mut self) {
             self.check_free_areas(true);
         }
 
+        #[no_coverage]
         fn check_integrity(&mut self) {
             if !self.check_free_areas(false) {
                 self.check_free_areas(true);
