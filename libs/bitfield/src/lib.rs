@@ -1,6 +1,4 @@
 #![cfg_attr(not(test), no_std)]
-#![feature(fn_traits)]
-#![feature(unboxed_closures)]
 
 #[macro_export]
 macro_rules! bitfield {
@@ -54,54 +52,6 @@ macro_rules! bitfield {
             type Output = $stname;
             fn bitor(self, rhs: $stname) -> $stname {
                 $stname(self.0 | rhs.0)
-            }
-        }
-
-        /* extract shortcut */
-
-        impl core::ops::FnOnce<($stname,)> for $stname {
-            type Output = $typ;
-            extern "rust-call"
-            fn call_once(self, (m,): ($stname,)) -> $typ {
-                self.extract(m)
-            }
-        }
-
-        impl core::ops::FnMut<($stname,)> for $stname {
-            extern "rust-call"
-            fn call_mut(&mut self, (m,): ($stname,)) -> $typ {
-                self.extract(m)
-            }
-        }
-
-        impl core::ops::Fn<($stname,)> for $stname {
-            extern "rust-call"
-            fn call(&self, (m,): ($stname,)) -> $typ {
-                self.extract(m)
-            }
-        }
-
-        /* compose shortcut */
-
-        impl core::ops::FnOnce<($typ,)> for $stname {
-            type Output = $stname;
-            extern "rust-call"
-            fn call_once(self, (v,): ($typ,)) -> $stname {
-                self.compose(v)
-            }
-        }
-
-        impl core::ops::FnMut<($typ,)> for $stname {
-            extern "rust-call"
-            fn call_mut(&mut self, (v,): ($typ,)) -> $stname {
-                self.compose(v)
-            }
-        }
-
-        impl core::ops::Fn<($typ,)> for $stname {
-            extern "rust-call"
-            fn call(&self, (v,): ($typ,)) -> $stname {
-                self.compose(v)
             }
         }
     };
@@ -187,14 +137,4 @@ mod tests {
         assert_eq!(mode.extract(OpenMode::NUM3), 7);
     }
 
-    #[test]
-    fn test_call1() {
-        let mode: OpenMode = OpenMode::APPEND | OpenMode::NUM3(6);
-        assert_eq!(mode(OpenMode::READ), 0);
-        assert_eq!(mode(OpenMode::WRITE), 0);
-        assert_eq!(mode(OpenMode::CREATE), 0);
-        assert_eq!(mode(OpenMode::APPEND), 1);
-        assert_eq!(mode(OpenMode::NUM1), 0);
-        assert_eq!(mode(OpenMode::NUM3), 6);
-    }
 }
