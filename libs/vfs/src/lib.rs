@@ -1,4 +1,5 @@
 #![feature(const_btree_new)]
+#![feature(no_coverage)]
 
 extern crate alloc;
 
@@ -273,30 +274,37 @@ impl Vfs {
 
 static mut VFS: Vfs = Vfs::new();
 
+#[no_coverage]
 pub unsafe fn init() {
     VFS.init();
 }
 
+#[no_coverage]
 pub unsafe fn open(path: &str, mode: OpenMode) -> Result<FileDescriptor, String> {
     VFS.open(path, mode)
 }
 
+#[no_coverage]
 pub unsafe fn read(fd: FileDescriptor, data: &mut [u8]) -> Result<usize, String> {
     VFS.read(fd, data)
 }
 
+#[no_coverage]
 pub unsafe fn write(fd: FileDescriptor, data: &[u8]) -> Result<usize, String> {
     VFS.write(fd, data)
 }
 
+#[no_coverage]
 pub unsafe fn close(fd: FileDescriptor) -> Result<(), String> {
     VFS.close(fd)
 }
 
+#[no_coverage]
 pub unsafe fn mkdir(path: &str) -> Result<(), String> {
     VFS.mkdir(path)
 }
 
+#[no_coverage]
 pub unsafe fn readdir(fd: FileDescriptor) -> Result<Option<DEntry>, String> {
     VFS.readdir(fd)
 }
