@@ -66,7 +66,7 @@ impl Vfs {
         }
     }
 
-    fn parse_path<'a>(path: &'a str) -> Result<Vec<&'a str>, String> {
+    fn parse_path<'a>(path: &'a str) -> Vec<&'a str> {
         let mut path_vec: Vec<&'a str> = Vec::new();
         let mut skip: usize = 0;
 
@@ -82,7 +82,7 @@ impl Vfs {
             }
         }
 
-        Ok(path_vec)
+        path_vec
     }
 
     fn mount(&mut self, mountpoint: &str, filesystem: Box<dyn FileSystem>) -> Result<(), String> {
@@ -313,25 +313,26 @@ pub unsafe fn readdir(fd: FileDescriptor) -> Result<Option<DEntry>, String> {
 mod tests {
     use crate::{
         OpenMode,
+        RamFs,
         Vfs,
     };
 
     #[test]
     fn parse_path() {
-        assert_eq!(Vfs::parse_path(""), Ok(vec![]));
-        assert_eq!(Vfs::parse_path("foo"), Ok(vec!["foo"]));
-        assert_eq!(Vfs::parse_path(".."), Ok(vec![]));
-        assert_eq!(Vfs::parse_path("/"), Ok(vec![]));
-        assert_eq!(Vfs::parse_path("/foo"), Ok(vec!["foo"]));
-        assert_eq!(Vfs::parse_path("/foo/bar"), Ok(vec!["foo", "bar"]));
-        assert_eq!(Vfs::parse_path("/foo/bar/baz"), Ok(vec!["foo", "bar", "baz"]));
-        assert_eq!(Vfs::parse_path("/foo///bar/."), Ok(vec!["foo", "bar"]));
-        assert_eq!(Vfs::parse_path("/foo/../bar"), Ok(vec!["bar"]));
-        assert_eq!(Vfs::parse_path("/foo/bar/.."), Ok(vec!["foo"]));
-        assert_eq!(Vfs::parse_path("/foo/././//../bar"), Ok(vec!["bar"]));
-        assert_eq!(Vfs::parse_path("/foo/.."), Ok(vec![]));
-        assert_eq!(Vfs::parse_path("/foo/../.."), Ok(vec![]));
-        assert_eq!(Vfs::parse_path("/.."), Ok(vec![]));
+        assert_eq!(Vfs::parse_path(""), Vec::<String>::new());
+        assert_eq!(Vfs::parse_path("foo"), vec!["foo"]);
+        assert_eq!(Vfs::parse_path(".."), Vec::<String>::new());
+        assert_eq!(Vfs::parse_path("/"), Vec::<String>::new());
+        assert_eq!(Vfs::parse_path("/foo"), vec!["foo"]);
+        assert_eq!(Vfs::parse_path("/foo/bar"), vec!["foo", "bar"]);
+        assert_eq!(Vfs::parse_path("/foo/bar/baz"), vec!["foo", "bar", "baz"]);
+        assert_eq!(Vfs::parse_path("/foo///bar/."), vec!["foo", "bar"]);
+        assert_eq!(Vfs::parse_path("/foo/../bar"), vec!["bar"]);
+        assert_eq!(Vfs::parse_path("/foo/bar/.."), vec!["foo"]);
+        assert_eq!(Vfs::parse_path("/foo/././//../bar"), vec!["bar"]);
+        assert_eq!(Vfs::parse_path("/foo/.."), Vec::<String>::new());
+        assert_eq!(Vfs::parse_path("/foo/../.."), Vec::<String>::new());
+        assert_eq!(Vfs::parse_path("/.."), Vec::<String>::new());
     }
 
     #[test]
