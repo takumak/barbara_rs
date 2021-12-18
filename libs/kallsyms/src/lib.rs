@@ -8,7 +8,6 @@ pub struct KAllSyms {
     token_table_off: usize,
 }
 
-#[derive(Clone, Copy)]
 #[repr(C)]
 struct KAllSymsHeader {
     _reserved: u32,
