@@ -6,7 +6,6 @@ use bitfield::bitfield;
 use mmio::{
     Readable, Writeable,
     RegisterR, RegisterRW,
-    Mmio,
 };
 
 bitfield!{
@@ -30,7 +29,6 @@ pub struct ArmUart {
     state: RegisterR<0x004, u32, State>,
     ctrl:  RegisterRW<0x008, u32, Ctrl>,
 }
-impl Mmio for ArmUart {}
 
 use crate::console::Console;
 

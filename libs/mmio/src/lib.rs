@@ -44,11 +44,6 @@ pub struct RegisterW<const OFF: usize, T, BF> {
 impl<const OFF: usize, T: From<BF>, BF>
     Writeable<OFF, T, BF> for RegisterW<OFF, T, BF> { }
 
-pub trait Mmio: Sized {
-    fn new(addr: usize) -> &'static mut Self {
-        unsafe { &mut *(addr as *mut Self) }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -75,7 +70,6 @@ mod tests {
     use crate::{
         Readable, Writeable,
         RegisterR, RegisterRW,
-        Mmio,
     };
 
     struct ArmUart {
@@ -83,12 +77,11 @@ mod tests {
         state: RegisterR<0x004, u32, State>,
         ctrl:  RegisterRW<0x008, u32, Ctrl>,
     }
-    impl Mmio for ArmUart {}
 
     #[test]
     fn test_write() {
         let buf: [u32; 3] = [0, 2, 0];
-        let uart = ArmUart::new(buf.as_ptr() as usize);
+        let uart = unsafe { &mut *(buf.as_ptr() as usize as *mut ArmUart) };
 
         uart.data.write(0xaa);
         uart.ctrl.write(uart.ctrl.read() | Ctrl::TX_EN | Ctrl::RX_EN);
@@ -99,7 +92,7 @@ mod tests {
     #[test]
     fn test_read() {
         let buf: [u32; 3] = [0xbb, 2, 5];
-        let uart = ArmUart::new(buf.as_ptr() as usize);
+        let uart = unsafe { &mut *(buf.as_ptr() as usize as *mut ArmUart) };
 
         assert_eq!(uart.data.read(), 0xbb);
         assert_eq!(uart.state.read(), State::RX_BF);
