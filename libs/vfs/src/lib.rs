@@ -86,7 +86,20 @@ impl Vfs {
     }
 
     fn mount(&mut self, mountpoint: &str, filesystem: Box<dyn FileSystem>) -> Result<(), String> {
-        let mountpoint = Self::parse_path(mountpoint)?
+        if self.mount.is_empty() {
+            if mountpoint != "/" {
+                return Err(format!("Non-root mountpoint specified for the first time: {}", mountpoint));
+            }
+        } else {
+            let fd = self.open(mountpoint, OpenMode::READ)?;
+            let dent = self.readdir(fd);
+            self.close(fd).expect("Failed to close file descriptor");
+            if dent?.is_some() {
+                return Err(format!("Mountpoint is not empty: {}", mountpoint));
+            }
+        }
+
+        let mountpoint = Self::parse_path(mountpoint)
             .iter().map(|&s| String::from(s)).collect();
 
         self.mount.insert(0, Mount {
