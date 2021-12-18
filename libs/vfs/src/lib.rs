@@ -87,10 +87,8 @@ impl Vfs {
     }
 
     fn mount(&mut self, mountpoint: &str, filesystem: Box<dyn FileSystem>) -> Result<(), String> {
-        let mountpoint = match Self::parse_path(mountpoint) {
-            Ok(v) => v.iter().map(|&s| String::from(s)).collect(),
-            Err(m) => return Err(m)
-        };
+        let mountpoint = Self::parse_path(mountpoint)?
+            .iter().map(|&s| String::from(s)).collect();
 
         self.mount.insert(0, Mount {
             id: self.next_mnt_id,
@@ -112,10 +110,7 @@ impl Vfs {
     fn find_mount_by_path_mut<'a, 'b>(&'a mut self, path: &'b str) ->
         Result<(&'a mut Mount, Vec<&'b str>), String>
     {
-        let path: Vec<&'b str> = match Self::parse_path(path) {
-            Ok(r) => r,
-            Err(m) => return Err(m),
-        };
+        let path: Vec<&'b str> = Self::parse_path(path)?;
         let mut mount: Option<&'a mut Mount> = None;
         for m in self.mount.iter_mut() {
             if path.iter().take(m.mountpoint.len()).map(|s| *s).eq(
@@ -149,10 +144,7 @@ impl Vfs {
     }
 
     fn open(&mut self, path: &str, mode: OpenMode) -> Result<FileDescriptor, String> {
-        let (mount, mpath) = match self.find_mount_by_path_mut(path) {
-            Ok(r) => r,
-            Err(m) => return Err(m),
-        };
+        let (mount, mpath) = self.find_mount_by_path_mut(path)?;
 
         let node_id =
             if mpath.len() == 0 {
@@ -161,27 +153,19 @@ impl Vfs {
                 let dirname = &mpath[..(mpath.len() - 1)];
                 let filename = mpath[mpath.len() - 1];
 
-                let dir = match mount.filesystem.lookup_path(dirname) {
-                    Ok(Some(node_id)) => node_id,
-                    Ok(None) => return Err(format!("File not found: {:?}", path)),
-                    Err(m) => return Err(m),
+                let dir = match mount.filesystem.lookup_path(dirname)? {
+                    Some(node_id) => node_id,
+                    None => return Err(format!("File not found: {:?}", path)),
                 };
 
-                match mount.filesystem.lookup(dir, filename) {
-                    Ok(Some(node_id)) => node_id,
-                    Err(m) => return Err(m),
-                    Ok(None) => {
+                match mount.filesystem.lookup(dir, filename)? {
+                    Some(node_id) => node_id,
+                    None => {
                         if mode.is_set(OpenMode::CREATE) {
-                            match mount.filesystem.create(
-                                dir,
-                                &DEntry {
-                                    name: String::from(filename),
-                                    ntype: NodeType::RegularFile,
-                                })
-                            {
-                                Ok(node_id) => node_id,
-                                Err(m) => return Err(m),
-                            }
+                            mount.filesystem.create(dir, &DEntry {
+                                name: String::from(filename),
+                                ntype: NodeType::RegularFile,
+                            })?
                         } else {
                             return Err(format!("File not found: {:?}", path))
                         }
@@ -190,17 +174,12 @@ impl Vfs {
             };
 
         if mode.is_set(OpenMode::TRUNC) {
-            if let Err(m) = mount.filesystem.truncate(node_id, 0) {
-                return Err(m)
-            }
+            mount.filesystem.truncate(node_id, 0)?;
         }
 
         let pos: usize =
             if mode.is_set(OpenMode::APPEND) {
-                match mount.filesystem.getsize(node_id) {
-                    Ok(size) => size,
-                    Err(m) => return Err(m),
-                }
+                mount.filesystem.getsize(node_id)?
             } else {
                 0
             };
@@ -223,58 +202,38 @@ impl Vfs {
     }
 
     fn read(&mut self, fd: FileDescriptor, data: &mut [u8]) -> Result<usize, String> {
-        let (file, mount) =
-            match self.get_file_mount_from_fd(fd) {
-                Ok((file, mount)) => (file, mount),
-                Err(m) => return Err(m),
-            };
+        let (file, mount) = self.get_file_mount_from_fd(fd)?;
 
         if !file.mode.is_set(OpenMode::READ) {
             return Err(format!("Permission error: fd={}", fd));
         }
 
-        match mount.filesystem.read(file.node_id, file.pos, data) {
-            Ok(size) => {
-                file.pos += size;
-                Ok(size)
-            },
-            Err(m) => Err(m),
-        }
+        let size = mount.filesystem.read(file.node_id, file.pos, data)?;
+        file.pos += size;
+        Ok(size)
     }
 
     fn write(&mut self, fd: FileDescriptor, data: &[u8]) -> Result<usize, String> {
-        let (file, mount) =
-            match self.get_file_mount_from_fd(fd) {
-                Ok((file, mount)) => (file, mount),
-                Err(m) => return Err(m),
-            };
+        let (file, mount) = self.get_file_mount_from_fd(fd)?;
 
         if !file.mode.is_set(OpenMode::WRITE) {
             return Err(format!("Permission error: fd={}", fd));
         }
 
-        match mount.filesystem.write(file.node_id, file.pos, data) {
-            Ok(size) => {
-                file.pos += size;
-                Ok(size)
-            },
-            Err(m) => Err(m),
-        }
+        let size = mount.filesystem.write(file.node_id, file.pos, data)?;
+        file.pos += size;
+        Ok(size)
     }
 
     fn close(&mut self, fd: FileDescriptor) -> Result<(), String> {
         match self.opened_files.remove(&fd) {
-            Some(f) => f,
-            None => return Err(format!("Invalid file descriptor: {}", fd)),
-        };
-        Ok(())
+            Some(_) => Ok(()),
+            None => Err(format!("Invalid file descriptor: {}", fd)),
+        }
     }
 
     fn mkdir(&mut self, path: &str) -> Result<(), String> {
-        let (mount, mpath) = match self.find_mount_by_path_mut(path) {
-            Ok(r) => r,
-            Err(m) => return Err(m),
-        };
+        let (mount, mpath) = self.find_mount_by_path_mut(path)?;
 
         if mpath.len() == 0 {
             return Err(format!("Directory exists: {}", path));
@@ -283,45 +242,34 @@ impl Vfs {
         let parent_name = &mpath[..(mpath.len() - 1)];
         let create_name = mpath[mpath.len() - 1];
 
-        let dir = match mount.filesystem.lookup_path(parent_name) {
-            Ok(Some(node_id)) => node_id,
-            Ok(None) => return Err(format!("Directory not found: {:?}", path)),
-            Err(m) => return Err(m),
+        let dir = match mount.filesystem.lookup_path(parent_name)? {
+            Some(node_id) => node_id,
+            None => return Err(format!("Directory not found: {:?}", path)),
         };
 
-        match mount.filesystem.lookup(dir, create_name) {
-            Ok(Some(_)) => Err(format!("Path exists: {}", path)),
-            Err(m) => Err(m),
-            Ok(None) => {
-                match mount.filesystem.create(
-                    dir,
-                    &DEntry {
-                        name: String::from(create_name),
-                        ntype: NodeType::Directory,
-                    })
-                {
-                    Ok(_) => Ok(()),
-                    Err(m) => Err(m),
-                }
+        match mount.filesystem.lookup(dir, create_name)? {
+            Some(_) => Err(format!("Path exists: {}", path)),
+            None => {
+                mount.filesystem.create(dir, &DEntry {
+                    name: String::from(create_name),
+                    ntype: NodeType::Directory,
+                })?;
+                Ok(())
             }
         }
     }
 
     fn readdir(&mut self, fd: FileDescriptor) -> Result<Option<DEntry>, String> {
-        let (file, mount) =
-            match self.get_file_mount_from_fd(fd) {
-                Ok((file, mount)) => (file, mount),
-                Err(m) => return Err(m),
-            };
+        let (file, mount) = self.get_file_mount_from_fd(fd)?;
 
-        match mount.filesystem.readdir(file.node_id, file.pos) {
-            Ok(Some((dent, _))) => {
+        let res = match mount.filesystem.readdir(file.node_id, file.pos)? {
+            Some((dent, _)) => {
                 file.pos += 1;
-                Ok(Some(dent))
+                Some(dent)
             },
-            Ok(None) => Ok(None),
-            Err(m) => Err(m),
-        }
+            None => None,
+        };
+        Ok(res)
     }
 }
 

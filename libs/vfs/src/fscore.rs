@@ -23,14 +23,13 @@ pub trait FileSystem {
     fn lookup(&self, dir: NodeId, name: &str) -> Result<Option<NodeId>, String> {
         let mut pos: usize = 0;
         loop {
-            match self.readdir(dir, pos) {
-                Ok(Some((ent, node_id))) => {
+            match self.readdir(dir, pos)? {
+                Some((ent, node_id)) => {
                     if ent.name == *name {
                         return Ok(Some(node_id))
                     }
                 },
-                Ok(None) => return Ok(None),
-                Err(m) => return Err(m),
+                None => return Ok(None),
             }
             pos += 1
         };
@@ -41,10 +40,9 @@ pub trait FileSystem {
         let mut file = NODE_ID_ROOT;
         for name in path {
             dir = file;
-            file = match self.lookup(dir, name) {
-                Ok(Some(node_id)) => node_id,
-                Ok(None) => return Ok(None),
-                Err(m) => return Err(m),
+            file = match self.lookup(dir, name)? {
+                Some(node_id) => node_id,
+                None => return Ok(None),
             };
         }
         return Ok(Some(file));
