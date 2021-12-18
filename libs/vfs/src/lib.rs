@@ -1,6 +1,4 @@
 #![feature(const_btree_new)]
-#![feature(fn_traits)]
-#![feature(unboxed_closures)]
 
 extern crate alloc;
 

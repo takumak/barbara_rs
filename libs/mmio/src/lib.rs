@@ -1,6 +1,4 @@
 #![cfg_attr(not(test), no_std)]
-#![feature(fn_traits)]
-#![feature(unboxed_closures)]
 
 pub trait Readable<const OFF: usize, T, BF>
 where BF: From<T>
