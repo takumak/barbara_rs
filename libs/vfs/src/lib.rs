@@ -122,7 +122,7 @@ impl Vfs {
     fn find_mount_by_path_mut<'a, 'b>(&'a mut self, path: &'b str) ->
         Result<(&'a mut Mount, Vec<&'b str>), String>
     {
-        let path: Vec<&'b str> = Self::parse_path(path)?;
+        let path: Vec<&'b str> = Self::parse_path(path);
         let mut mount: Option<&'a mut Mount> = None;
         for m in self.mount.iter_mut() {
             if path.iter().take(m.mountpoint.len()).map(|s| *s).eq(
