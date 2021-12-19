@@ -619,6 +619,8 @@ mod tests {
 
         vfs.mkdir("/foo").unwrap();
         vfs.mount("/foo", Box::new(RamFs::new())).unwrap();
+        vfs.mkdir("/foo/bar").unwrap();
+        vfs.mkdir("/baz").unwrap();
     }
 
     #[test]
@@ -631,5 +633,71 @@ mod tests {
 
         vfs.mount("/foo", Box::new(RamFs::new()))
             .expect_err("Mount on a file unexpectedly succeed");
+    }
+
+    #[test]
+    fn mkdir_already_exists() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        vfs.mkdir("/foo").unwrap();
+
+        vfs.mkdir("/foo")
+            .expect_err("mkdir on already exist directory unexpectedly succeed");
+    }
+
+    #[test]
+    fn mkdir_on_mountpoint() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        vfs.mkdir("/foo").unwrap();
+        vfs.mount("/foo", Box::new(RamFs::new())).unwrap();
+
+        vfs.mkdir("/foo")
+            .expect_err("mkdir on a mountpoint unexpectedly succeed");
+    }
+
+    #[test]
+    fn mkdir_parent_not_found() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        vfs.mkdir("/foo/bar")
+            .expect_err("mkdir on non-existent parent unexpectedly succeed");
+    }
+
+    #[test]
+    fn read_invalid_fd() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+        let mut buf: [u8; 10] = [0; 10];
+        vfs.read(100, &mut buf)
+            .expect_err("read on invalid fd unexpectedly succeed");
+    }
+
+    #[test]
+    fn write_invalid_fd() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+        let buf: [u8; 10] = [0; 10];
+        vfs.write(100, &buf)
+            .expect_err("write on invalid fd unexpectedly succeed");
+    }
+
+    #[test]
+    fn close_invalid_fd() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+        vfs.close(100)
+            .expect_err("close on invalid fd unexpectedly succeed");
+    }
+
+    #[test]
+    fn open_parent_not_found() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+        vfs.open("/foo/bar.txt", OpenMode::CREATE)
+            .expect_err("open for non-existent path unexpectedly succeed");
     }
 }
