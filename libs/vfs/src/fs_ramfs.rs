@@ -146,3 +146,92 @@ impl crate::FileSystem for RamFs {
         Ok(file_node.file_body.len())
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        DEntry,
+        FileSystem,
+        NodeType,
+        NODE_ID_ROOT,
+        RamFs,
+    };
+
+    #[test]
+    fn create_on_regular_file() {
+        let mut ramfs = RamFs::new();
+
+        let parent = ramfs.create(
+            NODE_ID_ROOT,
+            &DEntry {
+                name: String::from("foo"),
+                ntype: NodeType::RegularFile,
+            }
+        ).unwrap();
+
+        ramfs.create(
+            parent,
+            &DEntry {
+                name: String::from("bar"),
+                ntype: NodeType::RegularFile,
+            }
+        ).expect_err("create on a regular file unexpectedly succeed");
+    }
+
+    #[test]
+    fn read_directory() {
+        let mut ramfs = RamFs::new();
+
+        let node_id = ramfs.create(
+            NODE_ID_ROOT,
+            &DEntry {
+                name: String::from("foo"),
+                ntype: NodeType::Directory,
+            }
+        ).unwrap();
+
+        let mut buf: [u8; 10] = [0; 10];
+        ramfs.read(node_id, 0, &mut buf)
+            .expect_err("read on a directory unexpectedly succeed");
+    }
+
+    #[test]
+    fn write_directory() {
+        let mut ramfs = RamFs::new();
+
+        let node_id = ramfs.create(
+            NODE_ID_ROOT,
+            &DEntry {
+                name: String::from("foo"),
+                ntype: NodeType::Directory,
+            }
+        ).unwrap();
+
+        let buf: [u8; 10] = [0; 10];
+        ramfs.write(node_id, 0, &buf)
+            .expect_err("write on a directory unexpectedly succeed");
+    }
+
+    #[test]
+    fn write_sparse() {
+        let mut ramfs = RamFs::new();
+
+        let node_id = ramfs.create(
+            NODE_ID_ROOT,
+            &DEntry {
+                name: String::from("foo"),
+                ntype: NodeType::RegularFile,
+            }
+        ).unwrap();
+
+        let buf1: [u8; 2] = [1; 2];
+        let buf2: [u8; 2] = [2; 2];
+        ramfs.write(node_id, 0, &buf1).unwrap();
+        ramfs.write(node_id, 4, &buf2).unwrap();
+
+        let mut buf: [u8; 6] = [1; 6];
+        ramfs.read(node_id, 0, &mut buf).unwrap();
+        assert_eq!(buf, [1u8, 1u8, 0u8, 0u8, 2u8, 2u8]);
+    }
+}
