@@ -719,6 +719,14 @@ mod tests {
     }
 
     #[test]
+    fn readdir_invalid_fd() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+        vfs.readdir(100)
+            .expect_err("read on invalid fd unexpectedly succeed");
+    }
+
+    #[test]
     fn open_parent_not_found() {
         let mut vfs = Vfs::new();
         vfs.init();

@@ -24,6 +24,7 @@ pub enum NodeType {
     RegularFile,
 }
 
+#[derive(Debug)]
 pub struct DEntry {
     pub name: String,
     pub ntype: NodeType,
@@ -63,5 +64,35 @@ pub trait FileSystem {
             };
         }
         return Ok(Some(file));
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        DEntry,
+        FsError,
+        NodeType,
+    };
+    use crate::posix;
+
+    #[test]
+    fn fserror_debug() {
+        let err = FsError::new(
+            posix::Errno::EINVAL,
+            String::from("test error"));
+        assert_eq!(format!("{:?}", err),
+                   "FsError { errno: EINVAL, message: \"test error\" }");
+    }
+
+    #[test]
+    fn dentry_debug() {
+        let dent = DEntry{
+            name: String::from("test_file"),
+            ntype: NodeType::RegularFile,
+        };
+        assert_eq!(format!("{:?}", dent),
+                   "DEntry { name: \"test_file\", ntype: RegularFile }");
     }
 }
