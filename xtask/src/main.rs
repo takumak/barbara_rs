@@ -4,6 +4,8 @@ use std::os::unix::fs::PermissionsExt;
 extern crate serde;
 extern crate serde_json;
 
+extern crate prettytable;
+
 extern crate clap;
 use clap::{Parser, Subcommand};
 
@@ -56,6 +58,36 @@ struct CompilerMessage {
 #[derive(serde::Deserialize, Debug)]
 struct Target {
     name: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct Coverage {
+    data: Vec<CoverageData>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct CoverageData {
+    files: Vec<CoverageFile>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct CoverageFile {
+    filename: String,
+    summary: CoverageSummary,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct CoverageSummary {
+    regions: CoverageSummaryItem,
+    functions: CoverageSummaryItem,
+    lines: CoverageSummaryItem,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct CoverageSummaryItem {
+    count: u32,
+    covered: u32,
+    percent: f64,
 }
 
 fn cargo_testall(args: &Vec<String>) {
@@ -203,8 +235,8 @@ fn cargo_testall(args: &Vec<String>) {
 
     let mut args: Vec<String> = vec![
         "cov", "--",
-        "report",
-        "--use-color",
+        "export",
+        "--format=text",
         "--ignore-filename-regex=/.cargo/registry",
         "--ignore-filename-regex=/library/std/",
         "--instr-profile=json5format.profdata",
@@ -217,14 +249,78 @@ fn cargo_testall(args: &Vec<String>) {
     let mut cargo = process::Command::new("cargo");
     cargo
         .current_dir(&cov_dir)
-        .args(args);
+        .args(args)
+        .stdout(process::Stdio::piped());
 
     println!("Run: {:?}", cargo);
 
-    let status = cargo
-        .status()
-        .expect("failed to execute cargo process");
-    assert!(status.success(), "failed to execute: {:?}", cargo);
+    let output = cargo
+        .output()
+        .expect("failed to spawn cargo command");
+
+    let cov: Coverage = serde_json::from_slice(
+        output.stdout.as_slice()).unwrap();
+
+    use prettytable::format::{
+        FormatBuilder,
+        LinePosition,
+        LineSeparator,
+    };
+    let mut table = prettytable::Table::new();
+    table.set_format(
+        FormatBuilder::new()
+            .separator(LinePosition::Title,  LineSeparator::new('-', '+', '+', '+'))
+            .separator(LinePosition::Bottom, LineSeparator::new('-', '+', '+', '+'))
+            .separator(LinePosition::Top,    LineSeparator::new('-', '+', '+', '+'))
+            .padding(2, 2)
+            .build());
+    table.set_titles(prettytable::Row::new(vec![
+        prettytable::Cell::new("Filename"),
+        prettytable::Cell::new("Regions"),
+        prettytable::Cell::new("Functions"),
+        prettytable::Cell::new("Lines"),
+    ]));
+    let rootdir = format!("{}/", env::current_dir().unwrap().to_str().unwrap());
+    for data in cov.data {
+        for file in data.files {
+            let mut filename = file.filename;
+            if filename.starts_with(&rootdir) {
+                filename = String::from(
+                    filename.strip_prefix(&rootdir).unwrap());
+            }
+
+            use prettytable::{Row, Cell, color, Attr};
+            let mut row = Row::empty();
+            row.add_cell(Cell::new(filename.as_str()));
+
+            for col in [file.summary.regions,
+                        file.summary.functions,
+                        file.summary.lines] {
+                let text =
+                    format!("{:.2} ({}/{})",
+                            col.percent,
+                            col.covered,
+                            col.count);
+
+                let c =
+                    if col.covered == col.count {
+                        color::GREEN
+                    } else if col.percent >= 80. {
+                        color::YELLOW
+                    } else {
+                        color::RED
+                    };
+
+                row.add_cell(
+                    Cell::new(text.as_str())
+                        .with_style(
+                            Attr::ForegroundColor(c)));
+            }
+
+            table.add_row(row);
+        }
+    }
+    table.printstd();
 
     // fix permissions
 
