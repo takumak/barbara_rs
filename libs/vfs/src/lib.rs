@@ -312,6 +312,7 @@ pub unsafe fn readdir(fd: FileDescriptor) -> Result<Option<DEntry>, String> {
 #[cfg(test)]
 mod tests {
     use crate::{
+        NodeType,
         OpenMode,
         RamFs,
         Vfs,
@@ -699,5 +700,43 @@ mod tests {
         vfs.init();
         vfs.open("/foo/bar.txt", OpenMode::CREATE)
             .expect_err("open for non-existent path unexpectedly succeed");
+    }
+
+    #[test]
+    fn nodetype_clone() {
+        let t = NodeType::Directory;
+        assert_eq!(t, t.clone());
+    }
+
+    #[test]
+    fn nodetype_debug() {
+        assert_eq!(format!("{:?}", NodeType::Directory), "Directory");
+    }
+
+    #[test]
+    fn read_eof() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        vfs.write(fd, "foo".as_bytes()).unwrap();
+        vfs.close(fd).unwrap();
+
+        let fd = vfs.open("/foo.txt", OpenMode::READ).unwrap();
+        let mut buf: [u8; 30] = [0; 30];
+        assert_eq!(vfs.read(fd, &mut buf).unwrap(), 3);
+        assert_eq!(vfs.read(fd, &mut buf).unwrap(), 0);
+        vfs.close(fd).unwrap();
+    }
+
+    #[test]
+    fn trunc_directory() {
+        let mut vfs = Vfs::new();
+        vfs.init();
+
+        vfs.mkdir("/foo").unwrap();
+
+        vfs.open("/foo", OpenMode::TRUNC)
+            .expect_err("open with OpenMode::TRUNC on a directory unexpectedly succeed");
     }
 }

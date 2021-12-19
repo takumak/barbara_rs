@@ -1,7 +1,7 @@
 pub type NodeId = usize;
 pub const NODE_ID_ROOT: NodeId = 0;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum NodeType {
     Directory = 1,
     RegularFile,
