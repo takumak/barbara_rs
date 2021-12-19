@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Errno {
     EPERM   =  1,
     ENOENT  =  2,
@@ -34,4 +34,21 @@ pub enum Errno {
     EPIPE   = 32,
     EDOM    = 33,
     ERANGE  = 34,
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use crate::Errno;
+
+    #[test]
+    fn errno_clone() {
+        assert_eq!(Errno::EINVAL, Errno::EINVAL.clone());
+    }
+
+    #[test]
+    fn errno_debug() {
+        assert_eq!(format!("{:?}", Errno::EINVAL), "EINVAL");
+    }
 }
