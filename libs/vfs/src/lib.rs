@@ -142,8 +142,7 @@ impl Vfs {
         let file = self.opened_files.get_mut(&fd)
             .ok_or(format!("Invalid file descriptor: {}", fd))?;
 
-        let mount = self.mount.iter_mut().find(|m| m.id == file.mount_id)
-            .ok_or(format!("Invalid mount id: {}", file.mount_id))?;
+        let mount = self.mount.iter_mut().find(|m| m.id == file.mount_id).unwrap();
 
         Ok((file, mount))
     }
