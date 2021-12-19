@@ -17,7 +17,7 @@ panic = "abort"
 
 [workspace]
 members = [
-    "xtask",
+    "helpers/xtask",
     "libs/bitfield",
     "libs/kallsyms",
     "libs/linked_list_allocator",
