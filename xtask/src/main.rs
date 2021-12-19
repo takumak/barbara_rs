@@ -1,4 +1,5 @@
-use std::{env, fs, process};
+use std::{env, fs, path, process};
+use std::os::unix::fs::PermissionsExt;
 
 extern crate serde;
 extern crate serde_json;
@@ -67,7 +68,7 @@ fn cargo_testall(args: &Vec<String>) {
     }
 
     let profraw_files =
-        |cov_dir: &std::path::PathBuf| cov_dir.read_dir().unwrap()
+        |cov_dir: &path::PathBuf| cov_dir.read_dir().unwrap()
         .filter(|e| e.is_ok())
         .map(|e| e.unwrap().path())
         .filter(|p| p.to_str().unwrap_or("").ends_with(".profraw"));
@@ -224,6 +225,33 @@ fn cargo_testall(args: &Vec<String>) {
         .status()
         .expect("failed to execute cargo process");
     assert!(status.success(), "failed to execute: {:?}", cargo);
+
+    // fix permissions
+
+    fn fix_permission(p: &path::Path) {
+        let _ = fs::set_permissions(
+            p,
+            PermissionsExt::from_mode(
+                if p.is_dir() {
+                    0o755
+                } else {
+                    0o644
+                }
+            ));
+
+        if p.is_dir() {
+            let r = fs::read_dir(p);
+            if r.is_ok() {
+                for e in r.unwrap() {
+                    if e.is_ok() {
+                        fix_permission(&e.unwrap().path().as_path());
+                    }
+                }
+            }
+        }
+    }
+
+    fix_permission(cov_dir.as_path());
 }
 
 fn main() {
