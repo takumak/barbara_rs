@@ -1,5 +1,22 @@
+use crate::posix;
+
 pub type NodeId = usize;
 pub const NODE_ID_ROOT: NodeId = 0;
+
+#[derive(Debug)]
+pub struct FsError {
+    errno: posix::Errno,
+    message: String,
+}
+
+impl FsError {
+    pub fn new(errno: posix::Errno, message: String) -> Self {
+        Self {
+            errno,
+            message,
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum NodeType {
@@ -13,14 +30,14 @@ pub struct DEntry {
 }
 
 pub trait FileSystem {
-    fn readdir(&self, dir: NodeId, pos: usize) -> Result<Option<(DEntry, NodeId)>, String>;
-    fn create(&mut self, dir: NodeId, dent: &DEntry) -> Result<NodeId, String>;
-    fn read(&self, file: NodeId, off: usize, data: &mut [u8]) -> Result<usize, String>;
-    fn write(&mut self, file: NodeId, off: usize, data: &[u8]) -> Result<usize, String>;
-    fn truncate(&mut self, file: NodeId, len: usize) -> Result<(), String>;
-    fn getsize(&self, file: NodeId) -> Result<usize, String>;
+    fn readdir(&self, dir: NodeId, pos: usize) -> Result<Option<(DEntry, NodeId)>, FsError>;
+    fn create(&mut self, dir: NodeId, dent: &DEntry) -> Result<NodeId, FsError>;
+    fn read(&self, file: NodeId, off: usize, data: &mut [u8]) -> Result<usize, FsError>;
+    fn write(&mut self, file: NodeId, off: usize, data: &[u8]) -> Result<usize, FsError>;
+    fn truncate(&mut self, file: NodeId, len: usize) -> Result<(), FsError>;
+    fn getsize(&self, file: NodeId) -> Result<usize, FsError>;
 
-    fn lookup(&self, dir: NodeId, name: &str) -> Result<Option<NodeId>, String> {
+    fn lookup(&self, dir: NodeId, name: &str) -> Result<Option<NodeId>, FsError> {
         let mut pos: usize = 0;
         loop {
             match self.readdir(dir, pos)? {
@@ -35,7 +52,7 @@ pub trait FileSystem {
         };
     }
 
-    fn lookup_path(&self, path: &[&str]) -> Result<Option<NodeId>, String> {
+    fn lookup_path(&self, path: &[&str]) -> Result<Option<NodeId>, FsError> {
         let mut dir;
         let mut file = NODE_ID_ROOT;
         for name in path {

@@ -1,5 +1,6 @@
 use crate::fscore::{
     DEntry,
+    FsError,
     NodeId,
     NODE_ID_ROOT,
     NodeType,
@@ -45,11 +46,13 @@ impl RamFs {
 }
 
 impl crate::FileSystem for RamFs {
-    fn readdir(&self, dir: NodeId, pos: usize) -> Result<Option<(DEntry, NodeId)>, String> {
+    fn readdir(&self, dir: NodeId, pos: usize) -> Result<Option<(DEntry, NodeId)>, FsError> {
         let dir_node = self.fsnodes.get(&dir).unwrap();
 
         if dir_node.ntype != NodeType::Directory {
-            return Err(format!("Attempt to readdir() for a file: id={}", dir_node.id));
+            return Err(FsError::new(
+                posix::Errno::EBADF,
+                format!("Attempt to readdir() for a file: id={}", dir_node.id)));
         }
 
         if pos >= dir_node.children.len() {
@@ -66,11 +69,13 @@ impl crate::FileSystem for RamFs {
         }
     }
 
-    fn create(&mut self, dir: NodeId, dent: &DEntry) -> Result<NodeId, String> {
+    fn create(&mut self, dir: NodeId, dent: &DEntry) -> Result<NodeId, FsError> {
         let dir_node = self.fsnodes.get_mut(&dir).unwrap();
 
         if dir_node.ntype != NodeType::Directory {
-            return Err(format!("Attempt to create child node for a file: id={}", dir_node.id));
+            return Err(FsError::new(
+                posix::Errno::EBADF,
+                format!("Attempt to create child node for a file: id={}", dir_node.id)));
         }
 
         let node_id = self.next_node_id;
@@ -90,11 +95,13 @@ impl crate::FileSystem for RamFs {
         Ok(node_id)
     }
 
-    fn read(&self, file: NodeId, off: usize, data: &mut [u8]) -> Result<usize, String> {
+    fn read(&self, file: NodeId, off: usize, data: &mut [u8]) -> Result<usize, FsError> {
         let file_node = self.fsnodes.get(&file).unwrap();
 
         if file_node.ntype != NodeType::RegularFile {
-            return Err(format!("Attempt to read() for a directory: id={}", file_node.id));
+            return Err(FsError::new(
+                posix::Errno::EISDIR,
+                format!("Attempt to read() for a directory: id={}", file_node.id)));
         }
 
         if off >= file_node.file_body.len() {
@@ -106,11 +113,13 @@ impl crate::FileSystem for RamFs {
         }
     }
 
-    fn write(&mut self, file: NodeId, off: usize, data: &[u8]) -> Result<usize, String> {
+    fn write(&mut self, file: NodeId, off: usize, data: &[u8]) -> Result<usize, FsError> {
         let file_node = self.fsnodes.get_mut(&file).unwrap();
 
         if file_node.ntype != NodeType::RegularFile {
-            return Err(format!("Attempt to write() for a directory: id={}", file_node.id));
+            return Err(FsError::new(
+                posix::Errno::EISDIR,
+                format!("Attempt to write() for a directory: id={}", file_node.id)));
         }
 
         if off < file_node.file_body.len() {
@@ -130,18 +139,20 @@ impl crate::FileSystem for RamFs {
         Ok(data.len())
     }
 
-    fn truncate(&mut self, file: NodeId, len: usize) -> Result<(), String> {
+    fn truncate(&mut self, file: NodeId, len: usize) -> Result<(), FsError> {
         let file_node = self.fsnodes.get_mut(&file).unwrap();
 
         if file_node.ntype != NodeType::RegularFile {
-            return Err(format!("Attempt to truncate() for a directory: id={}", file_node.id));
+            return Err(FsError::new(
+                posix::Errno::EISDIR,
+                format!("Attempt to truncate() for a directory: id={}", file_node.id)));
         }
 
         file_node.file_body.truncate(len);
         Ok(())
     }
 
-    fn getsize(&self, file: NodeId) -> Result<usize, String> {
+    fn getsize(&self, file: NodeId) -> Result<usize, FsError> {
         let file_node = self.fsnodes.get(&file).unwrap();
         Ok(file_node.file_body.len())
     }

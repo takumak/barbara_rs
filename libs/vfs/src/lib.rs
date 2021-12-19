@@ -1,6 +1,7 @@
 #![feature(const_btree_new)]
 #![feature(no_coverage)]
 
+extern crate posix;
 extern crate alloc;
 
 use alloc::{
@@ -27,6 +28,7 @@ mod fs_ramfs;
 use fscore::{
     DEntry,
     FileSystem,
+    FsError,
     NodeId,
     NodeType,
     NODE_ID_ROOT,
@@ -85,17 +87,21 @@ impl Vfs {
         path_vec
     }
 
-    fn mount(&mut self, mountpoint: &str, filesystem: Box<dyn FileSystem>) -> Result<(), String> {
+    fn mount(&mut self, mountpoint: &str, filesystem: Box<dyn FileSystem>) -> Result<(), FsError> {
         if self.mount.is_empty() {
             if mountpoint != "/" {
-                return Err(format!("Non-root mountpoint specified for the first time: {}", mountpoint));
+                return Err(FsError::new(
+                    posix::Errno::EINVAL,
+                    format!("Non-root mountpoint specified for the first time: {}", mountpoint)));
             }
         } else {
             let fd = self.open(mountpoint, OpenMode::READ)?;
             let dent = self.readdir(fd);
             self.close(fd).expect("Failed to close file descriptor");
             if dent?.is_some() {
-                return Err(format!("Mountpoint is not empty: {}", mountpoint));
+                return Err(FsError::new(
+                    posix::Errno::EEXIST,
+                    format!("Mountpoint is not empty: {}", mountpoint)));
             }
         }
 
@@ -137,17 +143,19 @@ impl Vfs {
     }
 
     fn get_file_mount_from_fd(&mut self, fd: FileDescriptor) ->
-        Result<(&mut OpenedFile, &mut Mount), String>
+        Result<(&mut OpenedFile, &mut Mount), FsError>
     {
         let file = self.opened_files.get_mut(&fd)
-            .ok_or(format!("Invalid file descriptor: {}", fd))?;
+            .ok_or(FsError::new(
+                posix::Errno::EBADF,
+                format!("Invalid file descriptor: {}", fd)))?;
 
         let mount = self.mount.iter_mut().find(|m| m.id == file.mount_id).unwrap();
 
         Ok((file, mount))
     }
 
-    fn open(&mut self, path: &str, mode: OpenMode) -> Result<FileDescriptor, String> {
+    fn open(&mut self, path: &str, mode: OpenMode) -> Result<FileDescriptor, FsError> {
         let (mount, mpath) = self.find_mount_by_path_mut(path);
 
         let node_id =
@@ -158,7 +166,9 @@ impl Vfs {
                 let filename = mpath[mpath.len() - 1];
 
                 let dir = mount.filesystem.lookup_path(dirname)?
-                    .ok_or(format!("File not found: {:?}", path))?;
+                    .ok_or(FsError::new(
+                        posix::Errno::ENOENT,
+                        format!("File not found: {:?}", path)))?;
 
                 match mount.filesystem.lookup(dir, filename)? {
                     Some(node_id) => node_id,
@@ -169,7 +179,9 @@ impl Vfs {
                                 ntype: NodeType::RegularFile,
                             })?
                         } else {
-                            return Err(format!("File not found: {:?}", path))
+                            return Err(FsError::new(
+                                posix::Errno::ENOENT,
+                                format!("File not found: {:?}", path)));
                         }
                     },
                 }
@@ -203,11 +215,13 @@ impl Vfs {
         Ok(fd)
     }
 
-    fn read(&mut self, fd: FileDescriptor, data: &mut [u8]) -> Result<usize, String> {
+    fn read(&mut self, fd: FileDescriptor, data: &mut [u8]) -> Result<usize, FsError> {
         let (file, mount) = self.get_file_mount_from_fd(fd)?;
 
         if !file.mode.is_set(OpenMode::READ) {
-            return Err(format!("Permission error: fd={}", fd));
+            return Err(FsError::new(
+                posix::Errno::EPERM,
+                format!("Permission error: fd={}", fd)));
         }
 
         let size = mount.filesystem.read(file.node_id, file.pos, data)?;
@@ -215,11 +229,13 @@ impl Vfs {
         Ok(size)
     }
 
-    fn write(&mut self, fd: FileDescriptor, data: &[u8]) -> Result<usize, String> {
+    fn write(&mut self, fd: FileDescriptor, data: &[u8]) -> Result<usize, FsError> {
         let (file, mount) = self.get_file_mount_from_fd(fd)?;
 
         if !file.mode.is_set(OpenMode::WRITE) {
-            return Err(format!("Permission error: fd={}", fd));
+            return Err(FsError::new(
+                posix::Errno::EPERM,
+                format!("Permission error: fd={}", fd)));
         }
 
         let size = mount.filesystem.write(file.node_id, file.pos, data)?;
@@ -227,27 +243,35 @@ impl Vfs {
         Ok(size)
     }
 
-    fn close(&mut self, fd: FileDescriptor) -> Result<(), String> {
+    fn close(&mut self, fd: FileDescriptor) -> Result<(), FsError> {
         self.opened_files.remove(&fd)
-            .ok_or(format!("Invalid file descriptor: {}", fd))?;
+            .ok_or(FsError::new(
+                posix::Errno::EBADF,
+                format!("Invalid file descriptor: {}", fd)))?;
         Ok(())
     }
 
-    fn mkdir(&mut self, path: &str) -> Result<(), String> {
+    fn mkdir(&mut self, path: &str) -> Result<(), FsError> {
         let (mount, mpath) = self.find_mount_by_path_mut(path);
 
         if mpath.len() == 0 {
-            return Err(format!("Directory exists: {}", path));
+            return Err(FsError::new(
+                posix::Errno::EEXIST,
+                format!("Directory exists: {}", path)));
         }
 
         let parent_name = &mpath[..(mpath.len() - 1)];
         let create_name = mpath[mpath.len() - 1];
 
         let dir = mount.filesystem.lookup_path(parent_name)?
-            .ok_or(format!("Directory not found: {:?}", path))?;
+            .ok_or(FsError::new(
+                posix::Errno::ENOENT,
+                format!("Directory not found: {:?}", path)))?;
 
         match mount.filesystem.lookup(dir, create_name)? {
-            Some(_) => Err(format!("Path exists: {}", path)),
+            Some(_) => Err(FsError::new(
+                posix::Errno::EEXIST,
+                format!("Path exists: {}", path))),
             None => {
                 mount.filesystem.create(dir, &DEntry {
                     name: String::from(create_name),
@@ -258,7 +282,7 @@ impl Vfs {
         }
     }
 
-    fn readdir(&mut self, fd: FileDescriptor) -> Result<Option<DEntry>, String> {
+    fn readdir(&mut self, fd: FileDescriptor) -> Result<Option<DEntry>, FsError> {
         let (file, mount) = self.get_file_mount_from_fd(fd)?;
 
         let res = match mount.filesystem.readdir(file.node_id, file.pos)? {
@@ -280,32 +304,32 @@ pub unsafe fn init() {
 }
 
 #[no_coverage]
-pub unsafe fn open(path: &str, mode: OpenMode) -> Result<FileDescriptor, String> {
+pub unsafe fn open(path: &str, mode: OpenMode) -> Result<FileDescriptor, FsError> {
     VFS.open(path, mode)
 }
 
 #[no_coverage]
-pub unsafe fn read(fd: FileDescriptor, data: &mut [u8]) -> Result<usize, String> {
+pub unsafe fn read(fd: FileDescriptor, data: &mut [u8]) -> Result<usize, FsError> {
     VFS.read(fd, data)
 }
 
 #[no_coverage]
-pub unsafe fn write(fd: FileDescriptor, data: &[u8]) -> Result<usize, String> {
+pub unsafe fn write(fd: FileDescriptor, data: &[u8]) -> Result<usize, FsError> {
     VFS.write(fd, data)
 }
 
 #[no_coverage]
-pub unsafe fn close(fd: FileDescriptor) -> Result<(), String> {
+pub unsafe fn close(fd: FileDescriptor) -> Result<(), FsError> {
     VFS.close(fd)
 }
 
 #[no_coverage]
-pub unsafe fn mkdir(path: &str) -> Result<(), String> {
+pub unsafe fn mkdir(path: &str) -> Result<(), FsError> {
     VFS.mkdir(path)
 }
 
 #[no_coverage]
-pub unsafe fn readdir(fd: FileDescriptor) -> Result<Option<DEntry>, String> {
+pub unsafe fn readdir(fd: FileDescriptor) -> Result<Option<DEntry>, FsError> {
     VFS.readdir(fd)
 }
 
