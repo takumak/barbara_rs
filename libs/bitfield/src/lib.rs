@@ -56,18 +56,11 @@ macro_rules! bitfield {
         }
     };
 
-    {$stname:ident : $typ:ty { $($body:tt)* }} => {
+    {$vis:vis $stname:ident : $typ:ty { $($body:tt)* }} => {
         #[derive(Clone, Copy, PartialEq, Debug)]
-        struct $stname($typ);
+        $vis struct $stname($typ);
         bitfield!{@impl $stname, $typ { $($body)* }}
     };
-
-    {pub $stname:ident : $typ:ty { $($body:tt)* }} => {
-        #[derive(Clone, Copy, PartialEq, Debug)]
-        pub struct $stname($typ);
-        bitfield!{@impl $stname, $typ { $($body)* }}
-    };
-
 }
 
 #[cfg(test)]
