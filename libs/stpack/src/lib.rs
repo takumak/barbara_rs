@@ -1,3 +1,8 @@
+pub trait Unpacker: Sized {
+    const SIZE: usize;
+    fn unpack(data: &[u8], le: bool) -> Result<(Self, &[u8]), ()>;
+}
+
 #[macro_export]
 macro_rules! unpacker {
     {@constructor_from <le> $ftyp:ty} => {
@@ -58,7 +63,7 @@ macro_rules! unpacker {
     };
 
     {@impl $stname:ident { $($body:tt)* }} => {
-        impl $stname {
+        impl $crate::Unpacker for $stname {
             const SIZE: usize = unpacker!{@allsize $($body)*};
 
             fn unpack(data: &[u8], le: bool) -> Result<(Self, &[u8]), ()> {
@@ -94,6 +99,8 @@ macro_rules! unpacker {
 
 #[cfg(test)]
 mod tests {
+    use crate::Unpacker;
+
     unpacker! {
         #[derive(PartialEq, Eq, Debug)]
         struct Foo {
