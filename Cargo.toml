@@ -23,5 +23,6 @@ members = [
     "libs/linked_list_allocator",
     "libs/mmio",
     "libs/posix",
+    "libs/stpack",
     "libs/vfs",
 ]
