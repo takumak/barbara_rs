@@ -32,21 +32,21 @@ macro_rules! unpacker {
     {@constructor <$lebe:ident> $data:ident
      { $($result:tt)* },
      { $($p:tt)* },
-     { $fname:ident : $ftyp:ty }} =>
+     { $vis:vis $fname:ident : $ftyp:ty }} =>
     {
-        unpacker!{@constructor <$lebe> $data {$($result)*}, {$($p)*}, {$fname : $ftyp,}}
+        unpacker!{@constructor <$lebe> $data {$($result)*}, {$($p)*}, {$vis $fname : $ftyp,}}
     };
 
     {@constructor <$lebe:ident> $data:ident
      { $($result:tt)* },
      { $($p:tt)* },
-     { $fname:ident : $ftyp:ty, $($body:tt)* }} =>
+     { $vis:vis $fname:ident : $ftyp:ty, $($body:tt)* }} =>
     {
         unpacker!{
             @constructor <$lebe> $data
             {$($result)*
              $fname: unpacker!{@constructor_one <$lebe> $data, $ftyp { $($p)* }},},
-            {$($p)* $fname : $ftyp, },
+            {$($p)* $vis $fname : $ftyp, },
             { $($body)* }}
     };
 
@@ -54,11 +54,11 @@ macro_rules! unpacker {
         0
     };
 
-    {@allsize $fname:ident : $ftyp:ty} => {
-        unpacker!{@allsize $fname : $ftyp,}
+    {@allsize $vis:vis $fname:ident : $ftyp:ty} => {
+        unpacker!{@allsize $vis $fname : $ftyp,}
     };
 
-    {@allsize $fname:ident : $ftyp:ty, $($body:tt)*} => {
+    {@allsize $vis:vis $fname:ident : $ftyp:ty, $($body:tt)*} => {
         core::mem::size_of::<$ftyp>() + unpacker!{@allsize $($body)*}
     };
 
@@ -99,7 +99,7 @@ mod tests {
         #[derive(PartialEq, Eq, Debug)]
         struct Foo {
             foo: u8,
-            bar: u16,
+            pub bar: u16,
             baz: u32,
         }
     }
