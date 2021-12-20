@@ -57,13 +57,7 @@ macro_rules! unpacker {
         core::mem::size_of::<$ftyp>() + unpacker!{@allsize $($body)*}
     };
 
-    {$(#[$attr:meta])* pub struct $stname:ident { $($body:tt)* }} => {
-        $(#[$attr])* pub unpacker!{struct $stname { $($body)* }}
-    };
-
-    {$(#[$attr:meta])* struct $stname:ident { $($body:tt)* }} => {
-        $(#[$attr])*
-        struct $stname { $($body)* }
+    {@impl $stname:ident { $($body:tt)* }} => {
         impl $stname {
             const SIZE: usize = unpacker!{@allsize $($body)*};
 
@@ -83,6 +77,18 @@ macro_rules! unpacker {
                 }
             }
         }
+    };
+
+    {$(#[$attr:meta])* pub struct $stname:ident { $($body:tt)* }} => {
+        $(#[$attr])*
+        pub struct $stname { $($body)* }
+        unpacker!{@impl $stname { $($body)* }}
+    };
+
+    {$(#[$attr:meta])* struct $stname:ident { $($body:tt)* }} => {
+        $(#[$attr])*
+        struct $stname { $($body)* }
+        unpacker!{@impl $stname { $($body)* }}
     };
 }
 
