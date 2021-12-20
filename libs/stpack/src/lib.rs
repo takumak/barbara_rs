@@ -67,27 +67,19 @@ macro_rules! unpacker {
         impl $stname {
             const SIZE: usize = unpacker!{@allsize $($body)*};
 
-            fn unpack_le(data: &[u8]) -> Result<(Self, &[u8]), ()> {
+            fn unpack(data: &[u8], le: bool) -> Result<(Self, &[u8]), ()> {
                 if data.len() < Self::SIZE {
                     Err(())
                 } else {
                     let (data, right) = data.split_at(Self::SIZE);
-                    Ok((
-                        unpacker!{@constructor <le> data { }, { }, { $($body)* }},
-                        right
-                    ))
-                }
-            }
+                    let r =
+                        if le {
+                            unpacker!{@constructor <le> data { }, { }, { $($body)* }}
+                        } else {
+                            unpacker!{@constructor <be> data { }, { }, { $($body)* }}
+                        };
 
-            fn unpack_be(data: &[u8]) -> Result<(Self, &[u8]), ()> {
-                if data.len() < Self::SIZE {
-                    Err(())
-                } else {
-                    let (data, right) = data.split_at(Self::SIZE);
-                    Ok((
-                        unpacker!{@constructor <be> data { }, { }, { $($body)* }},
-                        right
-                    ))
+                    Ok((r, right))
                 }
             }
         }
@@ -114,7 +106,7 @@ mod tests {
     fn foo_le() {
         let data: Vec<u8> = (0..10).collect();
         assert_eq!(
-            Foo::unpack_le(&data),
+            Foo::unpack(&data, true),
             Ok((
                 Foo {
                     foo: 0x00,
@@ -130,7 +122,7 @@ mod tests {
     fn test_be() {
         let data: Vec<u8> = (0..10).collect();
         assert_eq!(
-            Foo::unpack_be(&data),
+            Foo::unpack(&data, false),
             Ok((
                 Foo {
                     foo: 0x00,
