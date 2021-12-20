@@ -84,15 +84,9 @@ macro_rules! unpacker {
         }
     };
 
-    {$(#[$attr:meta])* pub struct $stname:ident { $($body:tt)* }} => {
+    {$(#[$attr:meta])* $vis:vis struct $stname:ident { $($body:tt)* }} => {
         $(#[$attr])*
-        pub struct $stname { $($body)* }
-        unpacker!{@impl $stname { $($body)* }}
-    };
-
-    {$(#[$attr:meta])* struct $stname:ident { $($body:tt)* }} => {
-        $(#[$attr])*
-        struct $stname { $($body)* }
+        $vis struct $stname { $($body)* }
         unpacker!{@impl $stname { $($body)* }}
     };
 }
