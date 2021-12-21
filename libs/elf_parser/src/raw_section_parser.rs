@@ -50,7 +50,7 @@ where H: Unpacker + ElfHeader,
 
         let size = self.header.get_shentsize() as usize;
         let off = self.header.get_shoff() as usize + (size * idx);
-        let (sh, _) = SH::unpack(&data[off..(off+size)], self.le)
+        let (sh, _) = SH::unpack(&data[off..], self.le)
             .or(Err(ElfParserError::new(
                 Errno::EINVAL,
                 format!("Failed to parse elf section header: {}", idx))))?;
