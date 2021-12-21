@@ -1,19 +1,20 @@
-extern crate posix;
 extern crate stpack;
-use posix::Errno;
+use stpack::Unpacker;
 
 mod err;
 mod ident;
 mod header;
 mod section_header;
+mod raw_section_parser;
 
 use err::ElfParserError;
-use ident::{ElfClass, ElfEndian, ElfIdent, ELF_IDENT_SIZE};
-use header::{Elf32Header, Elf64Header};
-use section_header::{Elf32SectionHeader, Elf64SectionHeader};
+use ident::{ElfClass, ElfIdent, ELF_IDENT_SIZE};
+use header::{ElfHeader, Elf32Header, Elf64Header};
+use section_header::{ElfSectionHeader, Elf32SectionHeader, Elf64SectionHeader};
+use raw_section_parser::RawSectionParser;
 
 struct ElfSection<'a> {
-    name: &'a String,
+    name: &'a str,
     typ: u32,
     flags: u64,
     addr: u64,
@@ -28,7 +29,6 @@ struct ElfParser<'a> {
     data: &'a [u8],
     ident: ElfIdent,
     sections: Vec<ElfSection<'a>>,
-    string_table: Vec<String>,
 }
 
 impl<'a> ElfParser<'a> {
@@ -43,42 +43,40 @@ impl<'a> ElfParser<'a> {
         }
     }
 
-    fn parse_sections<H: stpack::Unpacker, SH: stpack::Unpacker>(
-        data: &[u8], ident: ElfIdent) -> Result<Self, ElfParserError>
+    fn parse_sections<H, SH>(data: &'a [u8], ident: ElfIdent) ->
+        Result<Self, ElfParserError>
+    where H: Unpacker + ElfHeader,
+          SH: Unpacker + ElfSectionHeader
     {
-        let le = ident.endian == ElfEndian::ElfLE;
-        let (header, _) = H::unpack(&data[ELF_IDENT_SIZE..], le)
-            .or(Err(ElfParserError::new(
-                Errno::EINVAL, format!("Failed to parse ELF header"))))?;
-        let shstr = header.section_header_by_index(header.e_shstrndx)?;
-        let string_table: Vec<String> =
-            shstr.get_content(data)?
-            .split(|c| c == 0)
-            .map(|s| String::from_utf8(s))
+        let parser = RawSectionParser::<H, SH>::new(data, &ident)?;
+        let (_, str_tbl) = parser.nth(data, parser.header.get_shstrndx() as usize)?;
+
+        let string_table: Vec<&str> = str_tbl
+            .split(|&c| c == 0)
+            .map(|s| core::str::from_utf8(s).unwrap_or(""))
             .collect();
-        let mut sections: Vec<ElfSection> = Vec::new();
-        for idx in 0..header.shnum {
-            let sh = header.section_header_by_index(header.e_shstrndx)?;
-            let start: usize = sh.sh_offset;
-            let end: usize = start + sh.sh_size;
+
+        let mut sections: Vec<ElfSection<'a>> = Vec::new();
+        for idx in 0..parser.header.get_shnum() {
+            let (sh, content) = parser.nth(data, idx as usize)?;
             let sec = ElfSection {
-                name: string_table[sh.sh_name],
-                typ: sh.sh_type,
-                flags: sh.sh_flags,
-                addr: sh.sh_addr,
-                link: sh.sh_link,
-                info: sh.sh_info,
-                addralign: sh.sh_addralign,
-                entsize: sh.sh_entsize,
-                content: &data[start..end],
+                name: string_table[sh.get_name() as usize],
+                typ: sh.get_type(),
+                flags: sh.get_flags(),
+                addr: sh.get_addr(),
+                link: sh.get_link(),
+                info: sh.get_info(),
+                addralign: sh.get_addralign(),
+                entsize: sh.get_entsize(),
+                content,
             };
             sections.push(sec);
         }
+
         Ok(Self{
             data,
             ident,
             sections,
-            string_table,
         })
     }
 }

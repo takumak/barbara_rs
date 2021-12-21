@@ -19,6 +19,7 @@ panic = "abort"
 members = [
     "helpers/xtask",
     "libs/bitfield",
+    "libs/elf_parser",
     "libs/kallsyms",
     "libs/linked_list_allocator",
     "libs/mmio",

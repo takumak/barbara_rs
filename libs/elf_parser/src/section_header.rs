@@ -1,48 +1,24 @@
 extern crate stpack;
 use stpack::unpacker;
 
-// pub trait ElfSectionHeader {
-//     fn get_content(&self, data: &[u8]) -> Result<&[u8], ElfParserError> {
-//         let start: usize = self.sh_offset;
-//         let end: usize = start + self.sh_size;
-//         if data.len() < end {
-//             Err(ElfParserError::new(
-//                 Errno::EINVAL,
-//                 format!("Section content not in file range: filesize={:#x} section={:#x}-{:#x}",
-//                         data.len(), start, end)));
-//         } else {
-//             Ok(&data[start..end])
-//         }
-//     }
-// }
+use crate::rawelfparser;
 
-
-unpacker! {
-    pub struct Elf32SectionHeader {
-        sh_name: u32,
-        sh_type: u32,
-        sh_flags: u32,
-        sh_addr: u32,
-        sh_offset: u32,
-        sh_size: u32,
-        sh_link: u32,
-        sh_info: u32,
-        sh_addralign: u32,
-        sh_entsize: u32,
+rawelfparser! {
+    pub trait ElfSectionHeader;
+    {
+        pub struct Elf32SectionHeader;
+        pub struct Elf64SectionHeader;
     }
-}
-
-unpacker! {
-    pub struct Elf64SectionHeader {
-        sh_name: u32,
-        sh_type: u32,
-        sh_flags: u64,
-        sh_addr: u64,
-        sh_offset: u64,
-        sh_size: u64,
-        sh_link: u32,
-        sh_info: u32,
-        sh_addralign: u64,
-        sh_entsize: u64,
+    {
+        pub name: {u32, u32,} get_name(u32);
+        pub typ: {u32, u32,} get_type(u32);
+        pub flags: {u32, u64,} get_flags(u64);
+        pub addr: {u32, u64,} get_addr(u64);
+        pub offset: {u32, u64,} get_offset(u64);
+        pub size: {u32, u64,} get_size(u64);
+        pub link: {u32, u32,} get_link(u32);
+        pub info: {u32, u32,} get_info(u32);
+        pub addralign: {u32, u64,} get_addralign(u64);
+        pub entsize: {u32, u64,} get_entsize(u64);
     }
 }

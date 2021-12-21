@@ -14,7 +14,7 @@ pub enum ElfEndian {
     ElfBE,
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub struct ElfIdent {
     pub class: ElfClass,
     pub endian: ElfEndian,

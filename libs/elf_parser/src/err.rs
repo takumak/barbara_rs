@@ -1,6 +1,6 @@
 extern crate posix;
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub struct ElfParserError {
     errno: posix::Errno,
     message: String,
