@@ -55,13 +55,13 @@ impl<'a> ElfParser<'a> {
         let parser = RawSectionParser::<H, SH>::new(data, &ident)?;
         let (_, strtab_data) = parser.nth(data, parser.header.get_shstrndx() as usize)?;
 
-        let strtab = string_table::parse(strtab_data);
-
         let mut sections: Vec<ElfSection<'a>> = Vec::new();
         for idx in 0..parser.header.get_shnum() {
             let (sh, content) = parser.nth(data, idx as usize)?;
+            let name = string_table::read_one_from_offset(
+                strtab_data, sh.get_name() as usize);
             let sec = ElfSection {
-                name: strtab[sh.get_name() as usize],
+                name,
                 typ: sh.get_type(),
                 flags: sh.get_flags(),
                 addr: sh.get_addr(),

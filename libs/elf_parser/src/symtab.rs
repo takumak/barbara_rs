@@ -40,7 +40,6 @@ pub struct SymtabIterator<'a> {
     sections: &'a Vec<ElfSection<'a>>,
     curr_secidx: usize,
     curr_symidx: usize,
-    strtab: Option<(usize, Vec<&'a str>)>,
 }
 
 impl<'a> SymtabIterator<'a> {
@@ -54,7 +53,6 @@ impl<'a> SymtabIterator<'a> {
             sections,
             curr_secidx: 0,
             curr_symidx: 0,
-            strtab: None,
         }
     }
 }
@@ -98,7 +96,7 @@ impl<'a> Iterator for SymtabIterator<'a> {
         let sec = &self.sections[secidx];
         let data = &sec.content[(sec.entsize as usize * symidx)..];
 
-        let (addr, nameidx) = match self.class {
+        let (addr, nameoff) = match self.class {
             ElfClass::Elf32 =>
                 match Elf32SymtabEntry::unpack(data, self.le) {
                     Ok((ent, _)) => (ent.value as u64, ent.name as usize),
@@ -113,33 +111,20 @@ impl<'a> Iterator for SymtabIterator<'a> {
                 },
         };
 
-        if self.strtab.is_none() || self.strtab.as_ref().unwrap().0 != sec.link as usize {
-            let strtab_secidx = sec.link as usize;
-            if strtab_secidx >= self.sections.len() {
-                return Some(Err(ElfParserError::new(
-                    Errno::EINVAL,
-                    format!("Symtab refer invalid strtab section index: \
-                             {} (must be less than {})",
-                            strtab_secidx, self.sections.len()))));
-            }
-
-            let strtab = string_table::parse(
-                self.sections[strtab_secidx].content);
-            self.strtab = Some((strtab_secidx, strtab));
-        }
-
-        let strtab = &self.strtab.as_ref().unwrap().1;
-        if nameidx >= strtab.len() {
+        if sec.link as usize >= self.sections.len() {
             return Some(Err(ElfParserError::new(
                 Errno::EINVAL,
-                format!("Symbol name index out of range: \
+                format!("Symtab refer invalid strtab section index: \
                          {} (must be less than {})",
-                        nameidx, strtab.len()))));
+                        sec.link, self.sections.len()))));
         }
+
+        let name = string_table::read_one_from_offset(
+            self.sections[sec.link as usize].content, nameoff);
 
         self.curr_symidx = symidx + 1;
 
-        Some(Ok((addr, strtab[nameidx])))
+        Some(Ok((addr, name)))
     }
 }
 
@@ -368,141 +353,6 @@ mod tests {
     }
 
     #[test]
-    fn elf32be_symbol_name_index_out_of_range() {
-        let sections = vec![
-
-            ElfSection {
-                name: "",
-                typ: SHT_SYMTAB,
-                flags: 0,
-                addr: 0,
-                link: 1,
-                info: 0,
-                addralign: 0,
-                entsize: Elf32SymtabEntry::SIZE as u64,
-                content: &[
-                    0, 0, 0, 2,                 // name
-                    0x11, 0x22, 0x33, 0x44,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
-                ],
-            },
-
-            ElfSection {
-                name: "",
-                typ: SHT_STRTAB,
-                flags: 0,
-                addr: 0,
-                link: 0,
-                info: 0,
-                addralign: 0,
-                entsize: 0,
-                content: &[
-                    0,
-                    b't', b'e', b's', b't', 0,
-                ],
-            },
-
-        ];
-
-        let mut iter =
-            SymtabIterator::new(
-                ElfClass::Elf32, ElfEndian::ElfBE, &sections);
-
-        iter.next().unwrap().expect_err(
-            "Parsing broken symtab entry unexpectedly succeed");
-    }
-
-    #[test]
-    fn elf32be_multi_strtab() {
-        let sections = vec![
-
-            ElfSection {
-                name: "",
-                typ: SHT_SYMTAB,
-                flags: 0,
-                addr: 0,
-                link: 2,
-                info: 0,
-                addralign: 0,
-                entsize: Elf32SymtabEntry::SIZE as u64,
-                content: &[
-                    0, 0, 0, 1,                 // name
-                    0x11, 0x22, 0x33, 0x44,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
-                ],
-            },
-
-            ElfSection {
-                name: "",
-                typ: SHT_SYMTAB,
-                flags: 0,
-                addr: 0,
-                link: 3,
-                info: 0,
-                addralign: 0,
-                entsize: Elf32SymtabEntry::SIZE as u64,
-                content: &[
-                    0, 0, 0, 1,                 // name
-                    0x55, 0x66, 0x77, 0x88,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
-                ],
-            },
-
-            ElfSection {
-                name: "",
-                typ: SHT_STRTAB,
-                flags: 0,
-                addr: 0,
-                link: 0,
-                info: 0,
-                addralign: 0,
-                entsize: 0,
-                content: &[
-                    0,
-                    b'2', b'-', b'1', 0,
-                ],
-            },
-
-            ElfSection {
-                name: "",
-                typ: SHT_STRTAB,
-                flags: 0,
-                addr: 0,
-                link: 0,
-                info: 0,
-                addralign: 0,
-                entsize: 0,
-                content: &[
-                    0,
-                    b'3', b'-', b'1', 0,
-                ],
-            },
-
-        ];
-
-        assert_eq!(
-            SymtabIterator::new(ElfClass::Elf32,
-                                ElfEndian::ElfBE,
-                                &sections)
-                .map(|r| r.unwrap())
-                .collect::<Vec<(u64, &str)>>(),
-            vec![
-                (0x11223344u64, "2-1"),
-                (0x55667788u64, "3-1"),
-            ]
-        );
-    }
-
-    #[test]
     fn elf64le() {
         let sections = vec![
 
@@ -602,78 +452,5 @@ mod tests {
 
         iter.next().unwrap().expect_err(
             "Parsing broken symtab unexpectedly succeed");
-    }
-
-    #[test]
-    fn elf32be_multi_symtab() {
-        let sections = vec![
-
-            ElfSection {
-                name: "",
-                typ: SHT_SYMTAB,
-                flags: 0,
-                addr: 0,
-                link: 2,
-                info: 0,
-                addralign: 0,
-                entsize: Elf32SymtabEntry::SIZE as u64,
-                content: &[
-                    0, 0, 0, 1,                 // name
-                    0x11, 0x22, 0x33, 0x44,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
-                ],
-            },
-
-            ElfSection {
-                name: "",
-                typ: SHT_SYMTAB,
-                flags: 0,
-                addr: 0,
-                link: 2,
-                info: 0,
-                addralign: 0,
-                entsize: Elf32SymtabEntry::SIZE as u64,
-                content: &[
-                    0, 0, 0, 2,                 // name
-                    0xcc, 0xdd, 0xee, 0xff,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
-                ],
-            },
-
-            ElfSection {
-                name: "",
-                typ: SHT_STRTAB,
-                flags: 0,
-                addr: 0,
-                link: 0,
-                info: 0,
-                addralign: 0,
-                entsize: 0,
-                content: &[
-                    0,
-                    b'1', b'-', b'1', 0,
-                    b'1', b'-', b'2', 0,
-                ],
-            },
-
-        ];
-
-        assert_eq!(
-            SymtabIterator::new(ElfClass::Elf32,
-                                ElfEndian::ElfBE,
-                                &sections)
-                .map(|r| r.unwrap())
-                .collect::<Vec<(u64, &str)>>(),
-            vec![
-                (0x11223344u64, "1-1"),
-                (0xccddeeffu64, "1-2"),
-            ]
-        );
     }
 }

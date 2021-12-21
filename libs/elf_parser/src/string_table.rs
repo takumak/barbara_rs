@@ -1,58 +1,42 @@
-pub fn parse<'a>(strtab: &'a [u8]) -> Vec<&'a str> {
-    if strtab.len() == 0 {
-        return vec![];
+pub fn read_one_from_offset<'a>(strtab: &'a [u8], offset: usize) -> &'a str {
+    if offset >= strtab.len() {
+        return "";
     }
 
-    let strtab =
-        if strtab[strtab.len() - 1] == 0 {
-            &strtab[..(strtab.len() - 1)]
-        } else {
-            &strtab
-        };
-
-    strtab
-        .split(|&c| c == 0)
-        .map(|s| core::str::from_utf8(s)
-             .unwrap_or("** UTF8 DECODE ERROR **"))
-        .collect()
+    let right_all = &strtab[offset..];
+    let target = right_all.split(|c| *c == 0).next().unwrap_or(right_all);
+    core::str::from_utf8(target)
+        .unwrap_or("** UTF8 DECODE ERROR **")
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::string_table::parse;
+    use crate::string_table::read_one_from_offset;
 
     #[test]
-    fn zero_entries() {
-        assert_eq!(parse(&[]), Vec::<&str>::new());
-    }
-
-    #[test]
-    fn single_zero_length_entry() {
-        assert_eq!(parse(&[0]), vec![""]);
-    }
-
-    #[test]
-    fn double_zero_length_entry() {
-        assert_eq!(parse(&[0, 0]), vec!["", ""]);
+    fn empty() {
+        assert_eq!(read_one_from_offset(&[], 0), "");
+        assert_eq!(read_one_from_offset(&[], 1), "");
+        assert_eq!(read_one_from_offset(&[0], 0), "");
     }
 
     #[test]
     fn single_entry() {
-        assert_eq!(parse(&[b'a', 0]), vec!["a"]);
+        assert_eq!(read_one_from_offset(&[b'a'], 0), "a");
+        assert_eq!(read_one_from_offset(&[b'a'], 1), "");
+        assert_eq!(read_one_from_offset(&[b'a'], 2), "");
+        assert_eq!(read_one_from_offset(&[b'a', 0], 0), "a");
+        assert_eq!(read_one_from_offset(&[b'a', 0], 1), "");
+        assert_eq!(read_one_from_offset(&[b'a', 0], 2), "");
     }
 
     #[test]
-    fn non_empty_and_empty() {
-        assert_eq!(parse(&[b'a', 0, 0]), vec!["a", ""]);
-    }
-
-    #[test]
-    fn empty_and_non_empty() {
-        assert_eq!(parse(&[0, b'a', 0]), vec!["", "a"]);
-    }
-
-    #[test]
-    fn incomplete() {
-        assert_eq!(parse(&[b'a', b'b']), vec!["ab"]);
+    fn two_entries() {
+        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 0), "a");
+        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 1), "");
+        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 2), "c");
+        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 3), "");
+        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 4), "");
+        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 5), "");
     }
 }
