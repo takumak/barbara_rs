@@ -86,6 +86,51 @@ mod tests {
     };
 
     #[test]
+    fn elfclass_partialeq() {
+        assert_ne!(ElfClass::Elf32, ElfClass::Elf64);
+    }
+
+    #[test]
+    fn elfclass_debug() {
+        assert_eq!(format!("{:?}", ElfClass::Elf32), "Elf32");
+    }
+
+    #[test]
+    fn elfendian_partialeq() {
+        assert_ne!(ElfEndian::ElfLE, ElfEndian::ElfBE);
+    }
+
+    #[test]
+    fn elfendian_debug() {
+        assert_eq!(format!("{:?}", ElfEndian::ElfLE), "ElfLE");
+    }
+
+    #[test]
+    fn elfident_debug() {
+        assert_eq!(
+            format!("{:?}",
+                    ElfIdent {
+                        class: ElfClass::Elf32,
+                        endian: ElfEndian::ElfLE,
+                    }),
+            "ElfIdent { class: Elf32, endian: ElfLE }");
+    }
+
+    #[test]
+    fn incomplete() {
+        parse_ident(&[
+            0x7fu8, b'E', b'L', b'F',   // magic; should be [0x7f, 'E', 'L', 'F']
+            1u8,                        // 1: 32bit, 2: 64bit, others: error
+            1u8,                        // 1: Little endian, 2: Big endian, others: error
+            1u8,                        // elf version; should be 1
+            3u8,                        // OS ABI
+            0u8,                        // ABI version
+            0u8, 0u8, 0u8,              // padding
+            0u8, 0u8, 0u8, // 0u8,         // padding
+        ]).expect_err("parse_ident for incomlete data unexpectedly succeed");
+    }
+
+    #[test]
     fn invalid_magic() {
         parse_ident(&[
             0u8, 0u8, 0u8, 0u8,         // magic; should be [0x7f, 'E', 'L', 'F']
