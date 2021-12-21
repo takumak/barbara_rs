@@ -1,5 +1,6 @@
 extern crate posix;
 use posix::Errno;
+
 use crate::err::ElfParserError;
 
 #[derive(PartialEq, Debug)]

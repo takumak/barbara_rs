@@ -11,7 +11,7 @@ mod struct_parser;
 mod symtab;
 
 use err::ElfParserError;
-use ident::{ElfClass, ElfIdent, ELF_IDENT_SIZE};
+use ident::{ElfClass, ElfIdent};
 use header::{ElfHeader, Elf32Header, Elf64Header};
 use section_header::{ElfSectionHeader, Elf32SectionHeader, Elf64SectionHeader};
 use raw_section_parser::RawSectionParser;
