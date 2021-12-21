@@ -88,6 +88,7 @@ mod tests {
 
     #[test]
     fn elfclass_partialeq() {
+        assert_eq!(ElfClass::Elf32, ElfClass::Elf32.clone());
         assert_ne!(ElfClass::Elf32, ElfClass::Elf64);
     }
 
@@ -98,6 +99,7 @@ mod tests {
 
     #[test]
     fn elfendian_partialeq() {
+        assert_eq!(ElfEndian::ElfLE, ElfEndian::ElfLE.clone());
         assert_ne!(ElfEndian::ElfLE, ElfEndian::ElfBE);
     }
 

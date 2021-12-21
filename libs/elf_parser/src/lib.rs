@@ -90,7 +90,15 @@ impl<'a> ElfParser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ElfParser, ElfSection};
+    use crate::{
+        ElfParser,
+        ElfSection,
+        ident::{
+            ElfClass,
+            ElfEndian,
+            ElfIdent,
+        }
+    };
 
     #[test]
     fn elf32be() {
@@ -209,7 +217,7 @@ mod tests {
         ];
 
         ElfParser::from_bytes(&data)
-            .expect_err("ElfParser::parse unexpectedly succeed");
+            .expect_err("ElfParser::from_bytes unexpectedly succeed");
     }
 
     #[test]
@@ -241,7 +249,7 @@ mod tests {
         ];
 
         ElfParser::from_bytes(&data)
-            .expect_err("ElfParser::parse unexpectedly succeed");
+            .expect_err("ElfParser::from_bytes unexpectedly succeed");
     }
 
     #[test]
@@ -291,7 +299,7 @@ mod tests {
         ];
 
         ElfParser::from_bytes(&data)
-            .expect_err("ElfParser::parse unexpectedly succeed");
+            .expect_err("ElfParser::from_bytes unexpectedly succeed");
     }
 
     #[test]
@@ -411,6 +419,283 @@ mod tests {
         ];
 
         ElfParser::from_bytes(&data)
-            .expect_err("ElfParser::parse unexpectedly succeed");
+            .expect_err("ElfParser::from_bytes unexpectedly succeed");
+    }
+
+    #[test]
+    fn elfsection_partialeq() {
+        let sec1 = ElfSection {
+            name: "foo",
+            typ: 0,
+            flags: 1,
+            addr: 2,
+            link: 3,
+            info: 4,
+            addralign: 5,
+            entsize: 6,
+            content: &[0],
+        };
+
+        let sec2 = ElfSection {
+            name: "bar",
+            typ: 0,
+            flags: 1,
+            addr: 2,
+            link: 3,
+            info: 4,
+            addralign: 5,
+            entsize: 6,
+            content: &[0],
+        };
+
+        assert_ne!(sec1, sec2);
+    }
+
+    #[test]
+    fn elfsection_debug() {
+        let sec = ElfSection {
+            name: "foo",
+            typ: 0,
+            flags: 1,
+            addr: 2,
+            link: 3,
+            info: 4,
+            addralign: 5,
+            entsize: 6,
+            content: &[0],
+        };
+
+        assert_eq!(format!("{:?}", sec),
+                   "ElfSection { \
+                    name: \"foo\", \
+                    typ: 0, \
+                    flags: 1, \
+                    addr: 2, \
+                    link: 3, \
+                    info: 4, \
+                    addralign: 5, \
+                    entsize: 6, \
+                    content: [0] \
+                    }");
+    }
+
+    #[test]
+    fn elfparser_debug() {
+        let p = ElfParser {
+            ident: ElfIdent {
+                class: ElfClass::Elf32,
+                endian: ElfEndian::ElfLE,
+            },
+            sections: vec![],
+        };
+
+        assert_eq!(format!("{:?}", p),
+                   "ElfParser { \
+                    ident: ElfIdent { class: Elf32, endian: ElfLE }, \
+                    sections: [] \
+                    }");
+    }
+
+    #[test]
+    fn elf32be_ident_incomplete() {
+        let data: &[u8] = &[
+            // ident
+            0x7f, b'E', b'L', b'F',     // magic; should be [0x7f, 'E', 'L', 'F']
+            1,                          // 1: 32bit, 2: 64bit, others: error
+            2,                          // 1: Little endian, 2: Big endian, others: error
+            1,                          // elf version; should be 1
+            3,                          // OS ABI
+            0,                          // ABI version
+            0, 0, 0, 0, 0, 0, //0,        // padding
+        ];
+
+        ElfParser::from_bytes(&data)
+            .expect_err("ElfParser::from_bytes unexpectedly succeed");
+    }
+
+    #[test]
+    fn elf64le_iter_symbols() {
+        let data: &[u8] = &[
+            // +0000 ident
+            0x7f, b'E', b'L', b'F',     // magic; should be [0x7f, 'E', 'L', 'F']
+            2,                          // 1: 32bit, 2: 64bit, others: error
+            1,                          // 1: Little endian, 2: Big endian, others: error
+            1,                          // elf version; should be 1
+            3,                          // OS ABI
+            0,                          // ABI version
+            0, 0, 0, 0, 0, 0, 0,        // padding
+
+            // +0010 header
+            2, 0,                       // type = ET_EXEC (executable file)
+            0, 0,                       // machine = EM_NONE
+            1, 0, 0, 0,                 // version = 1
+            0, 0, 0, 0, 0, 0, 0, 0,     // entry point
+            0, 0, 0, 0, 0, 0, 0, 0,     // ph_off
+            0x40, 0, 0, 0, 0, 0, 0, 0,  // sh_off
+            0, 0, 0, 0,                 // flags
+            0x40, 0,                    // ehsize
+            0, 0,                       // phentsize
+            0, 0,                       // phnum
+            0x40, 0,                    // shentsize
+            3, 0,                       // shnum
+            0, 0,                       // shstrndx
+
+            // +0040 .shstrtab section header
+            1, 0, 0, 0,                 // name
+            3, 0, 0, 0,                 // type = SHT_STRTAB
+            0x20, 0, 0, 0, 0, 0, 0, 0,  // flags = SHF_STRINGS
+            0, 0, 0, 0, 0, 0, 0, 0,     // addr
+            0x00, 1, 0, 0, 0, 0, 0, 0,  // offset
+            0x1b, 0, 0, 0, 0, 0, 0, 0,  // size
+            0, 0, 0, 0,                 // link
+            0, 0, 0, 0,                 // info
+            1, 0, 0, 0, 0, 0, 0, 0,     // addralign
+            0, 0, 0, 0, 0, 0, 0, 0,     // entsize
+
+            // +0080 .strtab section header
+            0xb, 0, 0, 0,               // name
+            3, 0, 0, 0,                 // type = SHT_STRTAB
+            0x20, 0, 0, 0, 0, 0, 0, 0,  // flags = SHF_STRINGS
+            0, 0, 0, 0, 0, 0, 0, 0,     // addr
+            0x20, 1, 0, 0, 0, 0, 0, 0,  // offset
+            0x0d, 0, 0, 0, 0, 0, 0, 0,  // size
+            0, 0, 0, 0,                 // link
+            0, 0, 0, 0,                 // info
+            1, 0, 0, 0, 0, 0, 0, 0,     // addralign
+            0, 0, 0, 0, 0, 0, 0, 0,     // entsize
+
+            // +00c0 .symtab section header
+            0x13, 0, 0, 0,              // name
+            2, 0, 0, 0,                 // type = SHT_SYMTAB
+            0, 0, 0, 0, 0, 0, 0, 0,     // flags = 0
+            0, 0, 0, 0, 0, 0, 0, 0,     // addr
+            0x30, 1, 0, 0, 0, 0, 0, 0,  // offset
+            0x30, 0, 0, 0, 0, 0, 0, 0,  // size
+            1, 0, 0, 0,                 // link
+            0, 0, 0, 0,                 // info
+            1, 0, 0, 0, 0, 0, 0, 0,     // addralign
+            0x18, 0, 0, 0, 0, 0, 0, 0,  // entsize
+
+            // +0100 .shstrtab section content
+            0, b'.', b's', b'h',
+            b's', b't', b'r', b't',
+            b'a', b'b', 0, b'.',
+            b's', b't', b'r', b't',
+            b'a', b'b', 0, b'.',
+            b's', b'y', b'm', b't',
+            b'a', b'b', 0, 0,
+            0, 0, 0, 0,
+
+            // +0120 .strtab section content
+            0, b't', b'e', b's',
+            b't', b'1', 0, b't',
+            b'e', b's', b't', b'2',
+            0, 0, 0, 0,
+
+            // +0120 .symtab section content
+            // +0120 symtab[0]
+            1, 0, 0, 0,                 // name
+            0,                          // info
+            0,                          // other
+            0, 0,                       // shndx
+            0, 1, 2, 3, 4, 5, 6, 7,     // value
+            0, 0, 0, 0, 0, 0, 0, 0,     // size
+            // +0138 symtab[1]
+            7, 0, 0, 0,                 // name
+            0,                          // info
+            0,                          // other
+            0, 0,                       // shndx
+            8, 9, 0, 1, 2, 3, 4, 5,     // value
+            0, 0, 0, 0, 0, 0, 0, 0,     // size
+        ];
+
+        let p = ElfParser::from_bytes(&data)
+            .expect("ElfParser::from_bytes failed");
+
+        assert_eq!(
+            p.sections[0],
+            ElfSection {
+                name: ".shstrtab",
+                typ: 3,
+                flags: 0x20,
+                addr: 0,
+                link: 0,
+                info: 0,
+                addralign: 1,
+                entsize: 0,
+                content: &[
+                    0, b'.', b's', b'h',
+                    b's', b't', b'r', b't',
+                    b'a', b'b', 0, b'.',
+                    b's', b't', b'r', b't',
+                    b'a', b'b', 0, b'.',
+                    b's', b'y', b'm', b't',
+                    b'a', b'b', 0,
+                ]
+            }
+        );
+
+        assert_eq!(
+            p.sections[1],
+            ElfSection {
+                name: ".strtab",
+                typ: 3,
+                flags: 0x20,
+                addr: 0,
+                link: 0,
+                info: 0,
+                addralign: 1,
+                entsize: 0,
+                content: &[
+                    0, b't', b'e', b's',
+                    b't', b'1', 0, b't',
+                    b'e', b's', b't', b'2',
+                    0,
+                ]
+            }
+        );
+
+        assert_eq!(
+            p.sections[2],
+            ElfSection {
+                name: ".symtab",
+                typ: 2,
+                flags: 0,
+                addr: 0,
+                link: 1,
+                info: 0,
+                addralign: 1,
+                entsize: 0x18,
+                content: &[
+                    // +0120 symtab[0]
+                    1, 0, 0, 0,                 // name
+                    0,                          // info
+                    0,                          // other
+                    0, 0,                       // shndx
+                    0, 1, 2, 3, 4, 5, 6, 7,     // value
+                    0, 0, 0, 0, 0, 0, 0, 0,     // size
+                    // +0138 symtab[1]
+                    7, 0, 0, 0,                 // name
+                    0,                          // info
+                    0,                          // other
+                    0, 0,                       // shndx
+                    8, 9, 0, 1, 2, 3, 4, 5,     // value
+                    0, 0, 0, 0, 0, 0, 0, 0,     // size
+                ]
+            }
+        );
+
+        assert_eq!(p.sections.len(), 3);
+
+        let syms: Vec<(u64, &str)> =
+            p.iter_symbols().map(|r| r.unwrap()).collect();
+
+        assert_eq!(
+            syms,
+            vec![
+                (0x07060504_03020100u64, "test1"),
+                (0x05040302_01000908u64, "test2"),
+            ]
+        );
     }
 }
