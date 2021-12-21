@@ -3,13 +3,13 @@ use posix::Errno;
 
 use crate::err::ElfParserError;
 
-#[derive(PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ElfClass {
     Elf32,
     Elf64,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ElfEndian {
     ElfLE,
     ElfBE,

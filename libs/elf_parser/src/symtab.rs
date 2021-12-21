@@ -34,7 +34,7 @@ unpacker! {
     }
 }
 
-struct SymtabIterator<'a> {
+pub struct SymtabIterator<'a> {
     class: ElfClass,
     le: bool,
     sections: &'a Vec<ElfSection<'a>>,
@@ -44,9 +44,9 @@ struct SymtabIterator<'a> {
 }
 
 impl<'a> SymtabIterator<'a> {
-    pub fn new(class: ElfClass,
-               endian: ElfEndian,
-               sections: &'a Vec<ElfSection<'a>>) -> Self
+    pub(crate) fn new(class: ElfClass,
+                      endian: ElfEndian,
+                      sections: &'a Vec<ElfSection<'a>>) -> Self
     {
         Self {
             class,

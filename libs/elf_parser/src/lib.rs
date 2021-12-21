@@ -15,6 +15,7 @@ use ident::{ElfClass, ElfIdent};
 use header::{ElfHeader, Elf32Header, Elf64Header};
 use section_header::{ElfSectionHeader, Elf32SectionHeader, Elf64SectionHeader};
 use raw_section_parser::RawSectionParser;
+use symtab::SymtabIterator;
 
 #[derive(PartialEq, Debug)]
 struct ElfSection<'a> {
@@ -30,14 +31,14 @@ struct ElfSection<'a> {
 }
 
 #[derive(Debug)]
-struct ElfParser<'a> {
+pub struct ElfParser<'a> {
     data: &'a [u8],
     ident: ElfIdent,
     sections: Vec<ElfSection<'a>>,
 }
 
 impl<'a> ElfParser<'a> {
-    fn parse(data: &'a [u8]) -> Result<Self, ElfParserError> {
+    pub fn from_bytes(data: &'a [u8]) -> Result<Self, ElfParserError> {
         let ident = ident::parse_ident(data)?;
         if ident.class == ElfClass::Elf32 {
             Self::parse_sections::<Elf32Header, Elf32SectionHeader>(data, ident)
@@ -78,6 +79,13 @@ impl<'a> ElfParser<'a> {
             ident,
             sections,
         })
+    }
+
+    pub fn iter_symbols(&'a self) -> SymtabIterator<'a> {
+        SymtabIterator::new(
+            self.ident.class,
+            self.ident.endian,
+            &self.sections)
     }
 }
 
@@ -132,7 +140,7 @@ mod tests {
             b'b', 0,
         ];
 
-        let parser = ElfParser::parse(&data).unwrap();
+        let parser = ElfParser::from_bytes(&data).unwrap();
         assert_eq!(
             parser.sections,
             vec![
@@ -202,7 +210,7 @@ mod tests {
             b'b', 0,
         ];
 
-        ElfParser::parse(&data)
+        ElfParser::from_bytes(&data)
             .expect_err("ElfParser::parse unexpectedly succeed");
     }
 
@@ -234,7 +242,7 @@ mod tests {
             0, // 0,                       // shstrndx
         ];
 
-        ElfParser::parse(&data)
+        ElfParser::from_bytes(&data)
             .expect_err("ElfParser::parse unexpectedly succeed");
     }
 
@@ -284,7 +292,7 @@ mod tests {
             b'b',// 0,
         ];
 
-        ElfParser::parse(&data)
+        ElfParser::from_bytes(&data)
             .expect_err("ElfParser::parse unexpectedly succeed");
     }
 
@@ -334,7 +342,7 @@ mod tests {
             0, 0, 0, 0,                 // entsize
         ];
 
-        let parser = ElfParser::parse(&data).unwrap();
+        let parser = ElfParser::from_bytes(&data).unwrap();
         assert_eq!(
             parser.sections,
             vec![
@@ -404,7 +412,7 @@ mod tests {
             0, 0, 0, // 0,                 // entsize
         ];
 
-        ElfParser::parse(&data)
+        ElfParser::from_bytes(&data)
             .expect_err("ElfParser::parse unexpectedly succeed");
     }
 }
