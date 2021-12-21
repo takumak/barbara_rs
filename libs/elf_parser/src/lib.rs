@@ -2,6 +2,7 @@ extern crate stpack;
 use stpack::Unpacker;
 
 mod err;
+mod string_table;
 mod ident;
 mod header;
 mod section_header;
