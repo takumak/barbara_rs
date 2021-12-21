@@ -35,11 +35,9 @@ impl<'a> ElfParser<'a> {
     fn parse(data: &'a [u8]) -> Result<Self, ElfParserError> {
         let ident = ident::parse_ident(data)?;
         if ident.class == ElfClass::Elf32 {
-            Self::parse_sections::<Elf32Header, Elf32SectionHeader>(
-                &data[ELF_IDENT_SIZE..], ident)
+            Self::parse_sections::<Elf32Header, Elf32SectionHeader>(data, ident)
         } else {
-            Self::parse_sections::<Elf64Header, Elf64SectionHeader>(
-                &data[ELF_IDENT_SIZE..], ident)
+            Self::parse_sections::<Elf64Header, Elf64SectionHeader>(data, ident)
         }
     }
 
