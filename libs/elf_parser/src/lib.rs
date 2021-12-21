@@ -6,6 +6,7 @@ mod ident;
 mod header;
 mod section_header;
 mod raw_section_parser;
+mod struct_parser;
 
 use err::ElfParserError;
 use ident::{ElfClass, ElfIdent, ELF_IDENT_SIZE};

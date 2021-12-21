@@ -1,9 +1,9 @@
 extern crate stpack;
 use stpack::unpacker;
 
-use crate::rawelfparser;
+use crate::struct_parser;
 
-rawelfparser! {
+struct_parser! {
     pub trait ElfSectionHeader;
     {
         pub struct Elf32SectionHeader;
