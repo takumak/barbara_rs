@@ -32,7 +32,6 @@ struct ElfSection<'a> {
 
 #[derive(Debug)]
 pub struct ElfParser<'a> {
-    data: &'a [u8],
     ident: ElfIdent,
     sections: Vec<ElfSection<'a>>,
 }
@@ -75,7 +74,6 @@ impl<'a> ElfParser<'a> {
         }
 
         Ok(Self{
-            data,
             ident,
             sections,
         })
