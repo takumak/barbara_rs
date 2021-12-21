@@ -119,8 +119,15 @@ impl<'a> Iterator for SymtabIterator<'a> {
                         sec.link, self.sections.len()))));
         }
 
+        let strtab_sec = &self.sections[sec.link as usize];
+        if strtab_sec.typ != SHT_STRTAB {
+            return Some(Err(ElfParserError::new(
+                Errno::EINVAL,
+                format!("Symtab linked section is not SHT_STRTAB: {}", sec.link))));
+        }
+
         let name = string_table::read_one_from_offset(
-            self.sections[sec.link as usize].content, nameoff);
+            strtab_sec.content, nameoff);
 
         self.curr_symidx = symidx + 1;
 
@@ -449,6 +456,54 @@ mod tests {
         let mut iter =
             SymtabIterator::new(
                 ElfClass::Elf64, ElfEndian::ElfLE, &sections);
+
+        iter.next().unwrap().expect_err(
+            "Parsing broken symtab unexpectedly succeed");
+    }
+
+    #[test]
+    fn elf32be_shstrtab_invalid_type() {
+        let sections = vec![
+
+            ElfSection {
+                name: "",
+                typ: SHT_SYMTAB,
+                flags: 0,
+                addr: 0,
+                link: 1,
+                info: 0,
+                addralign: 0,
+                entsize: Elf32SymtabEntry::SIZE as u64,
+                content: &[
+                    0, 0, 0, 1,                 // name
+                    0x11, 0x22, 0x33, 0x44,     // addr
+                    0, 0, 0, 0,                 // size
+                    0,                          // info
+                    0,                          // other
+                    0, 0,                       // shndx
+                ],
+            },
+
+            ElfSection {
+                name: "",
+                typ: SHT_SYMTAB,
+                flags: 0,
+                addr: 0,
+                link: 0,
+                info: 0,
+                addralign: 0,
+                entsize: 0,
+                content: &[
+                    0,
+                    b't', b'e', b's', b't', 0,
+                ],
+            },
+
+        ];
+
+        let mut iter =
+            SymtabIterator::new(
+                ElfClass::Elf32, ElfEndian::ElfBE, &sections);
 
         iter.next().unwrap().expect_err(
             "Parsing broken symtab unexpectedly succeed");
