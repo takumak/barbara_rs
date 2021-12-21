@@ -52,18 +52,15 @@ impl<'a> ElfParser<'a> {
           SH: Unpacker + ElfSectionHeader
     {
         let parser = RawSectionParser::<H, SH>::new(data, &ident)?;
-        let (_, str_tbl) = parser.nth(data, parser.header.get_shstrndx() as usize)?;
+        let (_, strtab_data) = parser.nth(data, parser.header.get_shstrndx() as usize)?;
 
-        let string_table: Vec<&str> = str_tbl
-            .split(|&c| c == 0)
-            .map(|s| core::str::from_utf8(s).unwrap_or(""))
-            .collect();
+        let strtab = string_table::parse(strtab_data);
 
         let mut sections: Vec<ElfSection<'a>> = Vec::new();
         for idx in 0..parser.header.get_shnum() {
             let (sh, content) = parser.nth(data, idx as usize)?;
             let sec = ElfSection {
-                name: string_table[sh.get_name() as usize],
+                name: strtab[sh.get_name() as usize],
                 typ: sh.get_type(),
                 flags: sh.get_flags(),
                 addr: sh.get_addr(),
