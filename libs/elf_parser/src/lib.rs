@@ -4,7 +4,7 @@ use stpack::Unpacker;
 mod err;
 mod raw;
 mod symtab;
-mod symbol;
+pub mod symbol;
 mod section_parser;
 
 use err::ElfParserError;
@@ -17,6 +17,8 @@ use raw::{
     section_header::ElfSectionHeader,
 };
 use symtab::SymtabIterator;
+
+pub use symbol::SymbolType;
 
 #[derive(PartialEq, Debug)]
 struct ElfSection<'a> {

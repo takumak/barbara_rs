@@ -1,4 +1,5 @@
-enum SymbolType {
+#[derive(PartialEq)]
+pub enum SymbolType {
     Notype,
     Object,
     Func,
@@ -15,7 +16,8 @@ enum SymbolType {
     Unknown(u8),
 }
 
-enum SymbolBind {
+#[derive(PartialEq)]
+pub enum SymbolBind {
     Local,
     Global,
     Weak,
@@ -39,7 +41,7 @@ pub struct Symbol<'a> {
 }
 
 impl<'a> Symbol<'a> {
-    fn get_type(&self) -> SymbolType {
+    pub fn get_type(&self) -> SymbolType {
         match self.info & 0xf {
             0  => SymbolType::Notype,
             1  => SymbolType::Object,
@@ -57,7 +59,7 @@ impl<'a> Symbol<'a> {
         }
     }
 
-    fn get_bind(&self) -> SymbolBind {
+    pub fn get_bind(&self) -> SymbolBind {
         match (self.info >> 4) & 0xf {
             0  => SymbolBind::Local,
             1  => SymbolBind::Global,
