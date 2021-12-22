@@ -15,12 +15,6 @@ pub enum ElfEndian {
     ElfBE,
 }
 
-#[derive(PartialEq, Debug)]
-pub struct ElfIdent {
-    pub class: ElfClass,
-    pub endian: ElfEndian,
-}
-
 pub const ELF_IDENT_SIZE: usize = 16;
 
 const MAGIC: [u8; 4] = [0x7f, b'E', b'L', b'F'];
@@ -41,7 +35,7 @@ const DATA2MSB: u8 = 2;
 
 const EV_CURRENT: u8 = 1;
 
-pub fn parse_ident(data: &[u8]) -> Result<ElfIdent, ElfParserError> {
+pub fn parse_ident(data: &[u8]) -> Result<(ElfClass, ElfEndian), ElfParserError> {
     if data.len() < ELF_IDENT_SIZE {
         return Err(ElfParserError::new(
             Errno::EINVAL, String::from("File size too small")));
@@ -74,7 +68,7 @@ pub fn parse_ident(data: &[u8]) -> Result<ElfIdent, ElfParserError> {
             Errno::EINVAL, format!("Unknown elf version: {}", ident[OFF_VERSION])));
     }
 
-    Ok(ElfIdent{ class, endian })
+    Ok((class, endian))
 }
 
 #[cfg(test)]
@@ -82,7 +76,6 @@ mod tests {
     use crate::ident::{
         ElfClass,
         ElfEndian,
-        ElfIdent,
         parse_ident,
     };
 
@@ -106,17 +99,6 @@ mod tests {
     #[test]
     fn elfendian_debug() {
         assert_eq!(format!("{:?}", ElfEndian::ElfLE), "ElfLE");
-    }
-
-    #[test]
-    fn elfident_debug() {
-        assert_eq!(
-            format!("{:?}",
-                    ElfIdent {
-                        class: ElfClass::Elf32,
-                        endian: ElfEndian::ElfLE,
-                    }),
-            "ElfIdent { class: Elf32, endian: ElfLE }");
     }
 
     #[test]
@@ -202,10 +184,7 @@ mod tests {
                 0u8, 0u8, 0u8,              // padding
                 0u8, 0u8, 0u8, 0u8,         // padding
             ]),
-            Ok(ElfIdent {
-                class: ElfClass::Elf32,
-                endian: ElfEndian::ElfLE,
-            })
+            Ok((ElfClass::Elf32, ElfEndian::ElfLE))
         );
     }
 
@@ -222,10 +201,7 @@ mod tests {
                 0u8, 0u8, 0u8,              // padding
                 0u8, 0u8, 0u8, 0u8,         // padding
             ]),
-            Ok(ElfIdent {
-                class: ElfClass::Elf64,
-                endian: ElfEndian::ElfLE,
-            })
+            Ok((ElfClass::Elf64, ElfEndian::ElfLE))
         );
     }
 
@@ -242,10 +218,7 @@ mod tests {
                 0u8, 0u8, 0u8,              // padding
                 0u8, 0u8, 0u8, 0u8,         // padding
             ]),
-            Ok(ElfIdent {
-                class: ElfClass::Elf32,
-                endian: ElfEndian::ElfBE,
-            })
+            Ok((ElfClass::Elf32, ElfEndian::ElfBE))
         );
     }
 }

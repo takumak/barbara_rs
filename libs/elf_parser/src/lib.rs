@@ -12,7 +12,7 @@ mod symtab;
 mod symbol;
 
 use err::ElfParserError;
-use ident::{ElfClass, ElfIdent};
+use ident::{ElfClass, ElfEndian};
 use header::{ElfHeader, Elf32Header, Elf64Header};
 use section_header::{ElfSectionHeader, Elf32SectionHeader, Elf64SectionHeader};
 use section_parser::SectionParser;
@@ -33,26 +33,27 @@ struct ElfSection<'a> {
 
 #[derive(Debug)]
 pub struct ElfParser<'a> {
-    ident: ElfIdent,
+    pub class: ElfClass,
+    pub endian: ElfEndian,
     sections: Vec<ElfSection<'a>>,
 }
 
 impl<'a> ElfParser<'a> {
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, ElfParserError> {
-        let ident = ident::parse_ident(data)?;
-        if ident.class == ElfClass::Elf32 {
-            Self::parse_sections::<Elf32Header, Elf32SectionHeader>(data, ident)
+        let (class, endian) = ident::parse_ident(data)?;
+        if class == ElfClass::Elf32 {
+            Self::parse_sections::<Elf32Header, Elf32SectionHeader>(data, class, endian)
         } else {
-            Self::parse_sections::<Elf64Header, Elf64SectionHeader>(data, ident)
+            Self::parse_sections::<Elf64Header, Elf64SectionHeader>(data, class, endian)
         }
     }
 
-    fn parse_sections<H, SH>(data: &'a [u8], ident: ElfIdent) ->
+    fn parse_sections<H, SH>(data: &'a [u8], class: ElfClass, endian: ElfEndian) ->
         Result<Self, ElfParserError>
     where H: Unpacker + ElfHeader,
           SH: Unpacker + ElfSectionHeader
     {
-        let parser = SectionParser::<H, SH>::new(data, &ident)?;
+        let parser = SectionParser::<H, SH>::new(data, endian)?;
         let (_, strtab_data) = parser.nth(data, parser.header.get_shstrndx() as usize)?;
 
         let mut sections: Vec<ElfSection<'a>> = Vec::new();
@@ -75,15 +76,16 @@ impl<'a> ElfParser<'a> {
         }
 
         Ok(Self{
-            ident,
+            class,
+            endian,
             sections,
         })
     }
 
     pub fn iter_symbols(&'a self) -> SymtabIterator<'a> {
         SymtabIterator::new(
-            self.ident.class,
-            self.ident.endian,
+            self.class,
+            self.endian,
             &self.sections)
     }
 }
@@ -98,7 +100,6 @@ mod tests {
         ident::{
             ElfClass,
             ElfEndian,
-            ElfIdent,
         }
     };
 
@@ -484,16 +485,15 @@ mod tests {
     #[test]
     fn elfparser_debug() {
         let p = ElfParser {
-            ident: ElfIdent {
-                class: ElfClass::Elf32,
-                endian: ElfEndian::ElfLE,
-            },
+            class: ElfClass::Elf32,
+            endian: ElfEndian::ElfLE,
             sections: vec![],
         };
 
         assert_eq!(format!("{:?}", p),
                    "ElfParser { \
-                    ident: ElfIdent { class: Elf32, endian: ElfLE }, \
+                    class: Elf32, \
+                    endian: ElfLE, \
                     sections: [] \
                     }");
     }

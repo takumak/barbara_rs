@@ -5,7 +5,7 @@ extern crate stpack;
 use stpack::Unpacker;
 
 use crate::err::ElfParserError;
-use crate::ident::{ElfEndian, ElfIdent, ELF_IDENT_SIZE};
+use crate::ident::{ElfEndian, ELF_IDENT_SIZE};
 use crate::header::ElfHeader;
 use crate::section_header::ElfSectionHeader;
 
@@ -22,10 +22,10 @@ impl<H, SH> SectionParser<H, SH>
 where H: Unpacker + ElfHeader,
       SH: Unpacker + ElfSectionHeader,
 {
-    pub fn new(data: &[u8], ident: &ElfIdent) ->
+    pub fn new(data: &[u8], endian: ElfEndian) ->
         Result<Self, ElfParserError>
     {
-        let le = ident.endian == ElfEndian::ElfLE;
+        let le = endian == ElfEndian::ElfLE;
         let (header, _) = H::unpack(&data[ELF_IDENT_SIZE..], le)
             .or(Err(ElfParserError::new(
                 Errno::EINVAL, format!("Failed to parse ELF header"))))?;
@@ -74,11 +74,7 @@ where H: Unpacker + ElfHeader,
 mod tests {
     use crate::{
         SectionParser,
-        ident::{
-            ElfIdent,
-            ElfClass,
-            ElfEndian,
-        },
+        ident::ElfEndian,
         header::{
             Elf32Header,
             Elf64Header,
@@ -94,10 +90,8 @@ mod tests {
         type Parser = SectionParser::<Elf32Header, Elf32SectionHeader>;
         let parser = Parser::new(
             &[0; 17],
-            &ElfIdent {
-                class: ElfClass::Elf32,
-                endian: ElfEndian::ElfBE,
-            });
+            ElfEndian::ElfBE
+        );
         assert!(parser.is_err());
     }
 
@@ -106,10 +100,8 @@ mod tests {
         type Parser = SectionParser::<Elf64Header, Elf64SectionHeader>;
         let parser = Parser::new(
             &[0; 17],
-            &ElfIdent {
-                class: ElfClass::Elf64,
-                endian: ElfEndian::ElfBE,
-            });
+            ElfEndian::ElfBE
+        );
         assert!(parser.is_err());
     }
 }
