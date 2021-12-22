@@ -49,7 +49,6 @@ impl<'a> Symbol<'a> {
             5  => SymbolType::Common,
             6  => SymbolType::Tls,
             7  => SymbolType::Num,
-            10 => SymbolType::Loos,
             10 => SymbolType::GnuIfunc,
             12 => SymbolType::Hios,
             13 => SymbolType::Loproc,
