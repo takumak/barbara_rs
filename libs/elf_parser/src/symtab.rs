@@ -6,8 +6,10 @@ use stpack::{unpacker, Unpacker};
 
 use crate::ElfSection;
 use crate::err::ElfParserError;
-use crate::ident::{ElfClass, ElfEndian};
-use crate::string_table;
+use crate::raw::ident::{
+    ElfClass,
+    ElfEndian,
+};
 use crate::symbol::Symbol;
 
 const SHT_SYMTAB: u32 = 2;
@@ -141,7 +143,9 @@ impl<'a> Iterator for SymtabIterator<'a> {
                 format!("Symtab linked section is not SHT_STRTAB: {}", sec.link))));
         }
 
-        let name = string_table::read_str_from_offset(
+        use crate::raw::string_table::read_str_from_offset;
+
+        let name = read_str_from_offset(
             strtab_sec.content, nameoff);
 
         self.curr_symidx = symidx + 1;
@@ -161,7 +165,7 @@ impl<'a> Iterator for SymtabIterator<'a> {
 mod tests {
     use crate::{
         ElfSection,
-        ident::{
+        raw::ident::{
             ElfClass,
             ElfEndian,
         },

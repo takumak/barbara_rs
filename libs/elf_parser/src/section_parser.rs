@@ -5,9 +5,14 @@ extern crate stpack;
 use stpack::Unpacker;
 
 use crate::err::ElfParserError;
-use crate::ident::{ElfEndian, ELF_IDENT_SIZE};
-use crate::header::ElfHeader;
-use crate::section_header::ElfSectionHeader;
+use crate::raw::{
+    ident::{
+        ElfEndian,
+        ELF_IDENT_SIZE,
+    },
+    header::ElfHeader,
+    section_header::ElfSectionHeader,
+};
 
 pub struct SectionParser<H, SH>
 where H: Unpacker + ElfHeader,
@@ -72,8 +77,8 @@ where H: Unpacker + ElfHeader,
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        SectionParser,
+    use crate::section_parser::SectionParser;
+    use crate::raw::{
         ident::ElfEndian,
         header::{
             Elf32Header,

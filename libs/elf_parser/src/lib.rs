@@ -2,20 +2,20 @@ extern crate stpack;
 use stpack::Unpacker;
 
 mod err;
-mod string_table;
-mod ident;
-mod header;
-mod section_header;
-mod section_parser;
-mod struct_parser;
+mod raw;
 mod symtab;
 mod symbol;
+mod section_parser;
 
 use err::ElfParserError;
-use ident::{ElfClass, ElfEndian};
-use header::{ElfHeader, Elf32Header, Elf64Header};
-use section_header::{ElfSectionHeader, Elf32SectionHeader, Elf64SectionHeader};
-use section_parser::SectionParser;
+use raw::{
+    ident::{
+        ElfClass,
+        ElfEndian,
+    },
+    header::ElfHeader,
+    section_header::ElfSectionHeader,
+};
 use symtab::SymtabIterator;
 
 #[derive(PartialEq, Debug)]
@@ -40,7 +40,19 @@ pub struct ElfParser<'a> {
 
 impl<'a> ElfParser<'a> {
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, ElfParserError> {
-        let (class, endian) = ident::parse_ident(data)?;
+        use raw::{
+            ident::parse_ident,
+            header::{
+                Elf32Header,
+                Elf64Header,
+            },
+            section_header::{
+                Elf32SectionHeader,
+                Elf64SectionHeader,
+            },
+        };
+
+        let (class, endian) = parse_ident(data)?;
         if class == ElfClass::Elf32 {
             Self::parse_sections::<Elf32Header, Elf32SectionHeader>(data, class, endian)
         } else {
@@ -53,13 +65,16 @@ impl<'a> ElfParser<'a> {
     where H: Unpacker + ElfHeader,
           SH: Unpacker + ElfSectionHeader
     {
+        use raw::string_table::read_str_from_offset;
+        use section_parser::SectionParser;
+
         let parser = SectionParser::<H, SH>::new(data, endian)?;
         let (_, strtab_data) = parser.nth(data, parser.header.get_shstrndx() as usize)?;
 
         let mut sections: Vec<ElfSection<'a>> = Vec::new();
         for idx in 0..parser.header.get_shnum() {
             let (sh, content) = parser.nth(data, idx as usize)?;
-            let name = string_table::read_str_from_offset(
+            let name = read_str_from_offset(
                 strtab_data, sh.get_name() as usize);
             let sec = ElfSection {
                 name,
@@ -97,7 +112,7 @@ mod tests {
         ElfParser,
         ElfSection,
         symbol::Symbol,
-        ident::{
+        raw::ident::{
             ElfClass,
             ElfEndian,
         }
