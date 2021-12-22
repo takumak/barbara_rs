@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! struct_parser {
+macro_rules! bits_struct {
 
     /**** struct body ****/
 
@@ -22,7 +22,7 @@ macro_rules! struct_parser {
      { $($fields:tt)* }
      { $($methods:tt)* }
      { $fvis:vis $fname:ident : {$ftyp:ty} $fgetter:ident($fgret:ty); $($remains:tt)* }} => {
-        struct_parser!{
+        bits_struct!{
             @struct $svis struct $sname : $tname
             { $($fields)* $fvis $fname : $ftyp,}
             { $($methods)*
@@ -43,8 +43,8 @@ macro_rules! struct_parser {
      { $($fields_1:tt)* }
      { $($fields_n:tt)* }
      { }} => {
-         struct_parser!{@struct $svis struct $sname : $tname { } { } { $($fields_1)* }}
-         struct_parser!{@structs $tname { $($snames)* } { } { } { $($fields_n)* }}
+         bits_struct!{@struct $svis struct $sname : $tname { } { } { $($fields_1)* }}
+         bits_struct!{@structs $tname { $($snames)* } { } { } { $($fields_n)* }}
     };
 
     {@structs $tname:ident
@@ -52,7 +52,7 @@ macro_rules! struct_parser {
      { $($fields_1:tt)* }
      { $($fields_n:tt)* }
      { $fvis:vis $fname:ident : {$ftyp:ty, $($typs:ty,)*} $fgetter:ident($fgret:ty); $($remains:tt)* }} => {
-        struct_parser!{
+        bits_struct!{
             @structs $tname
             { $($sname)+ }
             { $($fields_1)* $fvis $fname : {$ftyp} $fgetter($fgret); }
@@ -74,7 +74,7 @@ macro_rules! struct_parser {
     {@trait $tvis:vis trait $tname:ident
      { $($results:tt)* }
      { $fvis:vis $fname:ident : {$($ftyp:tt)+} $fgetter:ident($fgret:ty); $($remains:tt)* }} => {
-        struct_parser!{
+        bits_struct!{
             @trait $tvis trait $tname
             { $($results)* fn $fgetter(&self) -> $fgret; }
             { $($remains)* }
@@ -86,15 +86,15 @@ macro_rules! struct_parser {
     {$tvis:vis trait $tname:ident;
      { $($structs:tt)+ }
      { $($fields:tt)+ }} => {
-        struct_parser!{@trait $tvis trait $tname { } { $($fields)+ }}
-        struct_parser!{@structs $tname { $($structs)+ } { } { } { $($fields)+ }}
+        bits_struct!{@trait $tvis trait $tname { } { $($fields)+ }}
+        bits_struct!{@structs $tname { $($structs)+ } { } { } { $($fields)+ }}
     };
 }
 
 /*
 
 Example:
-    struct_parser! {
+    bits_struct! {
         pub trait Header;
         {
             pub struct Header32;
