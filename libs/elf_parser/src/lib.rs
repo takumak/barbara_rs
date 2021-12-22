@@ -59,7 +59,7 @@ impl<'a> ElfParser<'a> {
         let mut sections: Vec<ElfSection<'a>> = Vec::new();
         for idx in 0..parser.header.get_shnum() {
             let (sh, content) = parser.nth(data, idx as usize)?;
-            let name = string_table::read_one_from_offset(
+            let name = string_table::read_str_from_offset(
                 strtab_data, sh.get_name() as usize);
             let sec = ElfSection {
                 name,

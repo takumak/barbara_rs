@@ -1,4 +1,4 @@
-pub fn read_one_from_offset<'a>(strtab: &'a [u8], offset: usize) -> &'a str {
+pub fn read_str_from_offset<'a>(strtab: &'a [u8], offset: usize) -> &'a str {
     if offset >= strtab.len() {
         return "";
     }
@@ -11,32 +11,32 @@ pub fn read_one_from_offset<'a>(strtab: &'a [u8], offset: usize) -> &'a str {
 
 #[cfg(test)]
 mod tests {
-    use crate::string_table::read_one_from_offset;
+    use crate::string_table::read_str_from_offset;
 
     #[test]
     fn empty() {
-        assert_eq!(read_one_from_offset(&[], 0), "");
-        assert_eq!(read_one_from_offset(&[], 1), "");
-        assert_eq!(read_one_from_offset(&[0], 0), "");
+        assert_eq!(read_str_from_offset(&[], 0), "");
+        assert_eq!(read_str_from_offset(&[], 1), "");
+        assert_eq!(read_str_from_offset(&[0], 0), "");
     }
 
     #[test]
     fn single_entry() {
-        assert_eq!(read_one_from_offset(&[b'a'], 0), "a");
-        assert_eq!(read_one_from_offset(&[b'a'], 1), "");
-        assert_eq!(read_one_from_offset(&[b'a'], 2), "");
-        assert_eq!(read_one_from_offset(&[b'a', 0], 0), "a");
-        assert_eq!(read_one_from_offset(&[b'a', 0], 1), "");
-        assert_eq!(read_one_from_offset(&[b'a', 0], 2), "");
+        assert_eq!(read_str_from_offset(&[b'a'], 0), "a");
+        assert_eq!(read_str_from_offset(&[b'a'], 1), "");
+        assert_eq!(read_str_from_offset(&[b'a'], 2), "");
+        assert_eq!(read_str_from_offset(&[b'a', 0], 0), "a");
+        assert_eq!(read_str_from_offset(&[b'a', 0], 1), "");
+        assert_eq!(read_str_from_offset(&[b'a', 0], 2), "");
     }
 
     #[test]
     fn two_entries() {
-        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 0), "a");
-        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 1), "");
-        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 2), "c");
-        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 3), "");
-        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 4), "");
-        assert_eq!(read_one_from_offset(&[b'a', 0, b'c', 0], 5), "");
+        assert_eq!(read_str_from_offset(&[b'a', 0, b'c', 0], 0), "a");
+        assert_eq!(read_str_from_offset(&[b'a', 0, b'c', 0], 1), "");
+        assert_eq!(read_str_from_offset(&[b'a', 0, b'c', 0], 2), "c");
+        assert_eq!(read_str_from_offset(&[b'a', 0, b'c', 0], 3), "");
+        assert_eq!(read_str_from_offset(&[b'a', 0, b'c', 0], 4), "");
+        assert_eq!(read_str_from_offset(&[b'a', 0, b'c', 0], 5), "");
     }
 }

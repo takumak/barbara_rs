@@ -141,7 +141,7 @@ impl<'a> Iterator for SymtabIterator<'a> {
                 format!("Symtab linked section is not SHT_STRTAB: {}", sec.link))));
         }
 
-        let name = string_table::read_one_from_offset(
+        let name = string_table::read_str_from_offset(
             strtab_sec.content, nameoff);
 
         self.curr_symidx = symidx + 1;
