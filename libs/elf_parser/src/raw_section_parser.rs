@@ -68,3 +68,48 @@ where H: Unpacker + ElfHeader,
         Ok((sh, &data[off..(off+size)]))
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        RawSectionParser,
+        ident::{
+            ElfIdent,
+            ElfClass,
+            ElfEndian,
+        },
+        header::{
+            Elf32Header,
+            Elf64Header,
+        },
+        section_header::{
+            Elf32SectionHeader,
+            Elf64SectionHeader,
+        },
+    };
+
+    #[test]
+    fn elf32_incomplete_header() {
+        type Parser = RawSectionParser::<Elf32Header, Elf32SectionHeader>;
+        let parser = Parser::new(
+            &[0; 17],
+            &ElfIdent {
+                class: ElfClass::Elf32,
+                endian: ElfEndian::ElfBE,
+            });
+        assert!(parser.is_err());
+    }
+
+    #[test]
+    fn elf64_incomplete_header() {
+        type Parser = RawSectionParser::<Elf64Header, Elf64SectionHeader>;
+        let parser = Parser::new(
+            &[0; 17],
+            &ElfIdent {
+                class: ElfClass::Elf64,
+                endian: ElfEndian::ElfBE,
+            });
+        assert!(parser.is_err());
+    }
+}
