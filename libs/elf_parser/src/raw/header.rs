@@ -28,7 +28,11 @@ struct_parser! {
 
 #[cfg(test)]
 mod tests {
-    use crate::header::{ElfHeader, Elf32Header, Elf64Header};
+    use crate::raw::header::{
+        ElfHeader,
+        Elf32Header,
+        Elf64Header,
+    };
     use crate::stpack::Unpacker;
 
     #[test]

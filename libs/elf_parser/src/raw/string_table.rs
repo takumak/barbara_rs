@@ -11,7 +11,7 @@ pub fn read_str_from_offset<'a>(strtab: &'a [u8], offset: usize) -> &'a str {
 
 #[cfg(test)]
 mod tests {
-    use crate::string_table::read_str_from_offset;
+    use crate::raw::string_table::read_str_from_offset;
 
     #[test]
     fn empty() {
