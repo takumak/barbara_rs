@@ -143,9 +143,9 @@ impl<'a> Iterator for SymtabIterator<'a> {
                 format!("Symtab linked section is not SHT_STRTAB: {}", sec.link))));
         }
 
-        use crate::raw::string_table::read_str_from_offset;
+        use crate::raw::strtab;
 
-        let name = read_str_from_offset(
+        let name = strtab::read_str_from_offset(
             strtab_sec.content, nameoff);
 
         self.curr_symidx = symidx + 1;
