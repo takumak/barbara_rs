@@ -6,7 +6,7 @@ mod string_table;
 mod ident;
 mod header;
 mod section_header;
-mod raw_section_parser;
+mod section_parser;
 mod struct_parser;
 mod symtab;
 
@@ -14,7 +14,7 @@ use err::ElfParserError;
 use ident::{ElfClass, ElfIdent};
 use header::{ElfHeader, Elf32Header, Elf64Header};
 use section_header::{ElfSectionHeader, Elf32SectionHeader, Elf64SectionHeader};
-use raw_section_parser::RawSectionParser;
+use section_parser::SectionParser;
 use symtab::SymtabIterator;
 
 #[derive(PartialEq, Debug)]
@@ -51,7 +51,7 @@ impl<'a> ElfParser<'a> {
     where H: Unpacker + ElfHeader,
           SH: Unpacker + ElfSectionHeader
     {
-        let parser = RawSectionParser::<H, SH>::new(data, &ident)?;
+        let parser = SectionParser::<H, SH>::new(data, &ident)?;
         let (_, strtab_data) = parser.nth(data, parser.header.get_shstrndx() as usize)?;
 
         let mut sections: Vec<ElfSection<'a>> = Vec::new();

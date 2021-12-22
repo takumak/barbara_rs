@@ -9,7 +9,7 @@ use crate::ident::{ElfEndian, ElfIdent, ELF_IDENT_SIZE};
 use crate::header::ElfHeader;
 use crate::section_header::ElfSectionHeader;
 
-pub struct RawSectionParser<H, SH>
+pub struct SectionParser<H, SH>
 where H: Unpacker + ElfHeader,
       SH: Unpacker + ElfSectionHeader,
 {
@@ -18,7 +18,7 @@ where H: Unpacker + ElfHeader,
     _sh: [SH; 0],
 }
 
-impl<H, SH> RawSectionParser<H, SH>
+impl<H, SH> SectionParser<H, SH>
 where H: Unpacker + ElfHeader,
       SH: Unpacker + ElfSectionHeader,
 {
@@ -73,7 +73,7 @@ where H: Unpacker + ElfHeader,
 #[cfg(test)]
 mod tests {
     use crate::{
-        RawSectionParser,
+        SectionParser,
         ident::{
             ElfIdent,
             ElfClass,
@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn elf32_incomplete_header() {
-        type Parser = RawSectionParser::<Elf32Header, Elf32SectionHeader>;
+        type Parser = SectionParser::<Elf32Header, Elf32SectionHeader>;
         let parser = Parser::new(
             &[0; 17],
             &ElfIdent {
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn elf64_incomplete_header() {
-        type Parser = RawSectionParser::<Elf64Header, Elf64SectionHeader>;
+        type Parser = SectionParser::<Elf64Header, Elf64SectionHeader>;
         let parser = Parser::new(
             &[0; 17],
             &ElfIdent {
