@@ -9,6 +9,7 @@ mod section_header;
 mod section_parser;
 mod struct_parser;
 mod symtab;
+mod symbol;
 
 use err::ElfParserError;
 use ident::{ElfClass, ElfIdent};
@@ -93,6 +94,7 @@ mod tests {
     use crate::{
         ElfParser,
         ElfSection,
+        symbol::Symbol,
         ident::{
             ElfClass,
             ElfEndian,
@@ -687,14 +689,28 @@ mod tests {
 
         assert_eq!(p.sections.len(), 3);
 
-        let syms: Vec<(u64, &str)> =
+        let syms: Vec<Symbol> =
             p.iter_symbols().map(|r| r.unwrap()).collect();
 
         assert_eq!(
             syms,
             vec![
-                (0x07060504_03020100u64, "test1"),
-                (0x05040302_01000908u64, "test2"),
+                Symbol {
+                    name: "test1",
+                    value: 0x07060504_03020100u64,
+                    size: 0,
+                    info: 0,
+                    other: 0,
+                    shndx: 0,
+                },
+                Symbol {
+                    name: "test2",
+                    value: 0x05040302_01000908u64,
+                    size: 0,
+                    info: 0,
+                    other: 0,
+                    shndx: 0,
+                },
             ]
         );
     }
@@ -873,14 +889,29 @@ mod tests {
 
         assert_eq!(p.sections.len(), 3);
 
-        let syms: Vec<(u64, &str)> =
+        let syms: Vec<Symbol> =
             p.iter_symbols().map(|r| r.unwrap()).collect();
 
         assert_eq!(
             syms,
             vec![
-                (0x03020100u64, "test1"),
-                (0x01000908u64, "test2"),
+                Symbol {
+                    name: "test1",
+                    value: 0x03020100u64,
+                    size: 0,
+                    info: 0,
+                    other: 0,
+                    shndx: 0,
+                },
+
+                Symbol {
+                    name: "test2",
+                    value: 0x01000908u64,
+                    size: 0,
+                    info: 0,
+                    other: 0,
+                    shndx: 0,
+                },
             ]
         );
     }

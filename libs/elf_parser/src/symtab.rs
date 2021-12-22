@@ -8,6 +8,7 @@ use crate::ElfSection;
 use crate::err::ElfParserError;
 use crate::ident::{ElfClass, ElfEndian};
 use crate::string_table;
+use crate::symbol::Symbol;
 
 const SHT_SYMTAB: u32 = 2;
 const SHT_STRTAB: u32 = 3;
@@ -58,7 +59,7 @@ impl<'a> SymtabIterator<'a> {
 }
 
 impl<'a> Iterator for SymtabIterator<'a> {
-    type Item = Result<(u64, &'a str), ElfParserError>;
+    type Item = Result<Symbol<'a>, ElfParserError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut secidx = self.curr_secidx;
@@ -96,16 +97,30 @@ impl<'a> Iterator for SymtabIterator<'a> {
         let sec = &self.sections[secidx];
         let data = &sec.content[(sec.entsize as usize * symidx)..];
 
-        let (addr, nameoff) = match self.class {
+        let (nameoff, value, size, info, other, shndx) = match self.class {
             ElfClass::Elf32 =>
                 match Elf32SymtabEntry::unpack(data, self.le) {
-                    Ok((ent, _)) => (ent.value as u64, ent.name as usize),
+                    Ok((ent, _)) => (
+                        ent.name as usize,
+                        ent.value as u64,
+                        ent.size as u64,
+                        ent.info,
+                        ent.other,
+                        ent.shndx,
+                    ),
                     Err(_) => return Some(Err(ElfParserError::new(
                         Errno::EINVAL, String::from("Failed to parse symtab entry")))),
                 },
             ElfClass::Elf64 =>
                 match Elf64SymtabEntry::unpack(data, self.le) {
-                    Ok((ent, _)) => (ent.value, ent.name as usize),
+                    Ok((ent, _)) => (
+                        ent.name as usize,
+                        ent.value,
+                        ent.size,
+                        ent.info,
+                        ent.other,
+                        ent.shndx,
+                    ),
                     Err(_) => return Some(Err(ElfParserError::new(
                         Errno::EINVAL, String::from("Failed to parse symtab entry")))),
                 },
@@ -131,7 +146,14 @@ impl<'a> Iterator for SymtabIterator<'a> {
 
         self.curr_symidx = symidx + 1;
 
-        Some(Ok((addr, name)))
+        Some(Ok(Symbol {
+            name,
+            value,
+            size,
+            info,
+            other,
+            shndx,
+        }))
     }
 }
 
@@ -150,6 +172,7 @@ mod tests {
             SHT_SYMTAB,
             SHT_STRTAB,
         },
+        symbol::Symbol,
         stpack::Unpacker,
     };
 
@@ -210,8 +233,17 @@ mod tests {
                                 ElfEndian::ElfBE,
                                 &sections)
                 .map(|r| r.unwrap())
-                .collect::<Vec<(u64, &str)>>(),
-            vec![(0x11223344u64, "test")]
+                .collect::<Vec<Symbol>>(),
+            vec![
+                Symbol {
+                    name: "test",
+                    value: 0x11223344u64,
+                    size: 0,
+                    info: 0,
+                    other: 0,
+                    shndx: 0,
+                },
+            ]
         );
     }
 
@@ -406,8 +438,17 @@ mod tests {
                                 ElfEndian::ElfLE,
                                 &sections)
                 .map(|r| r.unwrap())
-                .collect::<Vec<(u64, &str)>>(),
-            vec![(0x8899aabbccddeeffu64, "test")]
+                .collect::<Vec<Symbol>>(),
+            vec![
+                Symbol {
+                    name: "test",
+                    value: 0x8899aabb_ccddeeffu64,
+                    size: 0,
+                    info: 0,
+                    other: 0,
+                    shndx: 0,
+                },
+            ]
         );
     }
 
