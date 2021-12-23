@@ -79,6 +79,11 @@ mod tests {
     }
 
     #[test]
+    fn mismatch_and_match() {
+        assert_eq!(kmp_search(&"abc".as_bytes(), &"ab abcd".as_bytes()), Some(3));
+    }
+
+    #[test]
     fn all_not_match() {
         assert_eq!(
             kmp_search_all(&"ab".as_bytes(), &"aaa".as_bytes()),
