@@ -22,7 +22,7 @@ fn split_by_token<'a>(sym: &'a [u8], token: &[u8]) -> Vec<&'a [u8]> {
     }
 }
 
-fn make_dic(syms: Vec<&[u8]>) -> Vec<(Vec<u8>, usize)> {
+pub fn make_dic(syms: Vec<&[u8]>) -> Vec<(Vec<u8>, usize)> {
     let mut syms = syms;
     let mut dic: Vec<(Vec<u8>, usize)> = vec![];
 
