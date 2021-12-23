@@ -1,0 +1,13 @@
+[package]
+name = "kallsyms_tools"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rustc-demangle = "0.1"
+elf_parser = { path = "../../libs/elf_parser" }
+
+[dependencies.clap]
+git = "https://github.com/clap-rs/clap.git"
+rev = "v3.0.0-rc.7"
+features = ["derive"]

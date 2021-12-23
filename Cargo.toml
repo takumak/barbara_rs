@@ -17,6 +17,7 @@ panic = "abort"
 
 [workspace]
 members = [
+    "helpers/kallsyms_tools",
     "helpers/xtask",
     "libs/bitfield",
     "libs/elf_parser",
