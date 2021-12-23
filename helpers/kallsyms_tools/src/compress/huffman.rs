@@ -5,7 +5,7 @@ struct Node {
     score: usize,
 }
 
-fn huffman(dic: Vec<(Vec<u8>, usize)>) -> Vec<(Vec<u8>, Vec<u8>)> {
+pub fn huffman(dic: Vec<(Vec<u8>, usize)>) -> Vec<(Vec<u8>, Vec<u8>)> {
     let mut nodes: Vec<Node> = vec![];
     let mut roots: Vec<usize> = vec![];
 
