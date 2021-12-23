@@ -1,4 +1,4 @@
-pub fn find_best_token<'a>(symbols: &'a [&'a [u8]]) -> (&'a [u8], usize) {
+pub fn strictly_find_best_token<'a>(symbols: &'a [&'a [u8]]) -> (&'a [u8], usize) {
     let mut suffix_array: Vec<&[u8]> = vec![];
     for sym in symbols {
         for i in 0..sym.len() {
@@ -47,7 +47,7 @@ pub fn find_best_token<'a>(symbols: &'a [&'a [u8]]) -> (&'a [u8], usize) {
 
 #[cfg(test)]
 mod tests {
-    use crate::compress::find_best_token::find_best_token;
+    use crate::compress::guess_best_token::strictly_find_best_token;
 
     #[test]
     fn test1() {
@@ -60,7 +60,7 @@ mod tests {
         ];
 
         assert_eq!(
-            find_best_token(data),
+            strictly_find_best_token(data),
             (&b"_test_common_token_"[..],
              "_test_common_token_".len() * 5)
         )

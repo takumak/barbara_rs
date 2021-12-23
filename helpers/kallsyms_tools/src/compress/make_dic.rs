@@ -1,4 +1,4 @@
-use crate::compress::find_best_token::find_best_token;
+use crate::compress::guess_best_token::strictly_find_best_token;
 
 fn split_by_token<'a>(sym: &'a [u8], token: &[u8]) -> Vec<&'a [u8]> {
     if sym.len() == 0 {
@@ -27,7 +27,7 @@ pub fn make_dic(syms: Vec<&[u8]>) -> Vec<(Vec<u8>, usize)> {
     let mut dic: Vec<(Vec<u8>, usize)> = vec![];
 
     while !syms.is_empty() {
-        let (token, score) = find_best_token(&syms);
+        let (token, score) = strictly_find_best_token(&syms);
         dic.push((token.to_vec(), score));
 
         let mut newsyms: Vec<&[u8]> = vec![];
