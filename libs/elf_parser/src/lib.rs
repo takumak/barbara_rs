@@ -5,7 +5,6 @@ mod err;
 mod raw;
 mod symtab;
 pub mod symbol;
-mod section_parser;
 
 use err::ElfParserError;
 use raw::{
@@ -67,8 +66,10 @@ impl<'a> ElfParser<'a> {
     where H: Unpacker + ElfHeader,
           SH: Unpacker + ElfSectionHeader
     {
-        use raw::strtab;
-        use section_parser::SectionParser;
+        use raw::{
+            strtab,
+            section_parser::SectionParser,
+        };
 
         let parser = SectionParser::<H, SH>::new(data, endian)?;
         let (_, strtab_data) = parser.nth(data, parser.header.get_shstrndx() as usize)?;

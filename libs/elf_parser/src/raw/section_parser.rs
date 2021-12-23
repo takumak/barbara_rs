@@ -77,7 +77,6 @@ where H: Unpacker + ElfHeader,
 
 #[cfg(test)]
 mod tests {
-    use crate::section_parser::SectionParser;
     use crate::raw::{
         ident::ElfEndian,
         header::{
@@ -88,6 +87,7 @@ mod tests {
             Elf32SectionHeader,
             Elf64SectionHeader,
         },
+        section_parser::SectionParser,
     };
 
     #[test]
