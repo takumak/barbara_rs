@@ -145,7 +145,7 @@ impl<'a> Iterator for SymtabIterator<'a> {
 
         use crate::raw::strtab;
 
-        let name = strtab::read_str_from_offset(
+        let name = strtab::read_at(
             strtab_sec.content, nameoff);
 
         self.curr_symidx = symidx + 1;
@@ -185,7 +185,7 @@ mod tests {
         let sections = vec![
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_SYMTAB,
                 flags: 0,
                 addr: 0,
@@ -197,7 +197,7 @@ mod tests {
             },
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_SYMTAB,
                 flags: 0,
                 addr: 0,
@@ -216,7 +216,7 @@ mod tests {
             },
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_STRTAB,
                 flags: 0,
                 addr: 0,
@@ -240,7 +240,7 @@ mod tests {
                 .collect::<Vec<Symbol>>(),
             vec![
                 Symbol {
-                    name: "test",
+                    name: b"test",
                     value: 0x11223344u64,
                     size: 0,
                     info: 0,
@@ -256,7 +256,7 @@ mod tests {
         let sections = vec![
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_SYMTAB,
                 flags: 0,
                 addr: 0,
@@ -275,7 +275,7 @@ mod tests {
             },
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_STRTAB,
                 flags: 0,
                 addr: 0,
@@ -304,7 +304,7 @@ mod tests {
         let sections = vec![
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_SYMTAB,
                 flags: 0,
                 addr: 0,
@@ -323,7 +323,7 @@ mod tests {
             },
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_STRTAB,
                 flags: 0,
                 addr: 0,
@@ -352,7 +352,7 @@ mod tests {
         let sections = vec![
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_SYMTAB,
                 flags: 0,
                 addr: 0,
@@ -371,7 +371,7 @@ mod tests {
             },
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_STRTAB,
                 flags: 0,
                 addr: 0,
@@ -400,7 +400,7 @@ mod tests {
         let sections = vec![
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_SYMTAB,
                 flags: 0,
                 addr: 0,
@@ -421,7 +421,7 @@ mod tests {
             },
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_STRTAB,
                 flags: 0,
                 addr: 0,
@@ -445,7 +445,7 @@ mod tests {
                 .collect::<Vec<Symbol>>(),
             vec![
                 Symbol {
-                    name: "test",
+                    name: b"test",
                     value: 0x8899aabb_ccddeeffu64,
                     size: 0,
                     info: 0,
@@ -461,7 +461,7 @@ mod tests {
         let sections = vec![
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_SYMTAB,
                 flags: 0,
                 addr: 0,
@@ -482,7 +482,7 @@ mod tests {
             },
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_STRTAB,
                 flags: 0,
                 addr: 0,
@@ -511,7 +511,7 @@ mod tests {
         let sections = vec![
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_SYMTAB,
                 flags: 0,
                 addr: 0,
@@ -530,7 +530,7 @@ mod tests {
             },
 
             ElfSection {
-                name: "",
+                name: b"",
                 typ: SHT_SYMTAB,
                 flags: 0,
                 addr: 0,

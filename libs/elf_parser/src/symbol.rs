@@ -32,7 +32,7 @@ pub enum SymbolBind {
 
 #[derive(PartialEq, Debug)]
 pub struct Symbol<'a> {
-    pub name: &'a str,
+    pub name: &'a [u8],
     pub value: u64,
     pub size: u64,
     pub info: u8,

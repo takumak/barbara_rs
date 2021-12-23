@@ -21,7 +21,7 @@ pub use symbol::SymbolType;
 
 #[derive(PartialEq, Debug)]
 struct ElfSection<'a> {
-    name: &'a str,
+    name: &'a [u8],
     typ: u32,
     flags: u64,
     addr: u64,
@@ -77,7 +77,7 @@ impl<'a> ElfParser<'a> {
         let mut sections: Vec<ElfSection<'a>> = Vec::new();
         for idx in 0..parser.header.get_shnum() {
             let (sh, content) = parser.nth(data, idx as usize)?;
-            let name = strtab::read_str_from_offset(
+            let name = strtab::read_at(
                 strtab_data, sh.get_name() as usize);
             let sec = ElfSection {
                 name,
@@ -172,7 +172,7 @@ mod tests {
             parser.sections,
             vec![
                 ElfSection {
-                    name: &".shstrtab",
+                    name: b".shstrtab",
                     typ: 3,
                     flags: 0x20,
                     addr: 0,
@@ -374,7 +374,7 @@ mod tests {
             parser.sections,
             vec![
                 ElfSection {
-                    name: &".shstrtab",
+                    name: b".shstrtab",
                     typ: 3,
                     flags: 0x20,
                     addr: 0,
@@ -446,7 +446,7 @@ mod tests {
     #[test]
     fn elfsection_partialeq() {
         let sec1 = ElfSection {
-            name: "foo",
+            name: b"foo",
             typ: 0,
             flags: 1,
             addr: 2,
@@ -458,7 +458,7 @@ mod tests {
         };
 
         let sec2 = ElfSection {
-            name: "bar",
+            name: b"bar",
             typ: 0,
             flags: 1,
             addr: 2,
@@ -475,7 +475,7 @@ mod tests {
     #[test]
     fn elfsection_debug() {
         let sec = ElfSection {
-            name: "foo",
+            name: b"foo",
             typ: 0,
             flags: 1,
             addr: 2,
@@ -488,7 +488,7 @@ mod tests {
 
         assert_eq!(format!("{:?}", sec),
                    "ElfSection { \
-                    name: \"foo\", \
+                    name: [102, 111, 111], \
                     typ: 0, \
                     flags: 1, \
                     addr: 2, \
@@ -635,7 +635,7 @@ mod tests {
         assert_eq!(
             p.sections[0],
             ElfSection {
-                name: ".shstrtab",
+                name: b".shstrtab",
                 typ: 3,
                 flags: 0x20,
                 addr: 0,
@@ -658,7 +658,7 @@ mod tests {
         assert_eq!(
             p.sections[1],
             ElfSection {
-                name: ".strtab",
+                name: b".strtab",
                 typ: 3,
                 flags: 0x20,
                 addr: 0,
@@ -678,7 +678,7 @@ mod tests {
         assert_eq!(
             p.sections[2],
             ElfSection {
-                name: ".symtab",
+                name: b".symtab",
                 typ: 2,
                 flags: 0,
                 addr: 0,
@@ -714,7 +714,7 @@ mod tests {
             syms,
             vec![
                 Symbol {
-                    name: "test1",
+                    name: b"test1",
                     value: 0x07060504_03020100u64,
                     size: 0,
                     info: 0,
@@ -722,7 +722,7 @@ mod tests {
                     shndx: 0,
                 },
                 Symbol {
-                    name: "test2",
+                    name: b"test2",
                     value: 0x05040302_01000908u64,
                     size: 0,
                     info: 0,
@@ -835,7 +835,7 @@ mod tests {
         assert_eq!(
             p.sections[0],
             ElfSection {
-                name: ".shstrtab",
+                name: b".shstrtab",
                 typ: 3,
                 flags: 0x20,
                 addr: 0,
@@ -858,7 +858,7 @@ mod tests {
         assert_eq!(
             p.sections[1],
             ElfSection {
-                name: ".strtab",
+                name: b".strtab",
                 typ: 3,
                 flags: 0x20,
                 addr: 0,
@@ -878,7 +878,7 @@ mod tests {
         assert_eq!(
             p.sections[2],
             ElfSection {
-                name: ".symtab",
+                name: b".symtab",
                 typ: 2,
                 flags: 0,
                 addr: 0,
@@ -914,7 +914,7 @@ mod tests {
             syms,
             vec![
                 Symbol {
-                    name: "test1",
+                    name: b"test1",
                     value: 0x03020100u64,
                     size: 0,
                     info: 0,
@@ -923,7 +923,7 @@ mod tests {
                 },
 
                 Symbol {
-                    name: "test2",
+                    name: b"test2",
                     value: 0x01000908u64,
                     size: 0,
                     info: 0,
