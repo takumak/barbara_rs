@@ -993,4 +993,151 @@ mod tests {
         ElfParser::from_bytes(&data)
             .expect_err("ElfParser::from_bytes unexpectedly succeed");
     }
+
+    #[test]
+    fn elf32be_too_small_shentsize() {
+        let data: &[u8] = &[
+            // ident
+            0x7f, b'E', b'L', b'F',     // magic; should be [0x7f, 'E', 'L', 'F']
+            1,                          // 1: 32bit, 2: 64bit, others: error
+            2,                          // 1: Little endian, 2: Big endian, others: error
+            1,                          // elf version; should be 1
+            3,                          // OS ABI
+            0,                          // ABI version
+            0, 0, 0, 0, 0, 0, 0,        // padding
+
+            // header
+            0, 2,                       // type = ET_EXEC (executable file)
+            0, 0,                       // machine = EM_NONE
+            0, 0, 0, 1,                 // version = 1
+            0xaa, 0xbb, 0xcc, 0xdd,     // entry point
+            0, 0, 0, 0,                 // ph_off
+            0, 0, 0, 0x34,              // sh_off
+            0, 0, 0, 0,                 // flags
+            0, 0x34,                    // ehsize
+            0, 0,                       // phentsize
+            0, 0,                       // phnum
+            0, 0x27,                    // shentsize
+            0, 1,                       // shnum
+            0, 0,                       // shstrndx
+
+            // .shstrtab section header
+            0, 0, 0, 1,                 // name
+            0, 0, 0, 3,                 // type = SHT_STRTAB
+            0, 0, 0, 0x20,              // flags = SHF_STRINGS
+            0, 0, 0, 0,                 // addr
+            0, 0, 0, 0x5c,              // offset
+            0, 0, 0, 0x0b,              // size
+            0, 0, 0, 0,                 // link
+            0, 0, 0, 0,                 // info
+            0, 0, 0, 1,                 // addralign
+            0, 0, 0, 0,                 // entsize
+
+            // .shstrtab section content
+            0,
+            b'.', b's', b'h', b's',
+            b't', b'r', b't', b'a',
+            b'b', 0,
+        ];
+
+        ElfParser::from_bytes(&data)
+            .expect_err("ElfParser::from_bytes unexpectedly succeed");
+    }
+
+    #[test]
+    fn elf32be_nobits() {
+        let data: &[u8] = &[
+            // ident
+            0x7f, b'E', b'L', b'F',     // magic; should be [0x7f, 'E', 'L', 'F']
+            1,                          // 1: 32bit, 2: 64bit, others: error
+            2,                          // 1: Little endian, 2: Big endian, others: error
+            1,                          // elf version; should be 1
+            3,                          // OS ABI
+            0,                          // ABI version
+            0, 0, 0, 0, 0, 0, 0,        // padding
+
+            // header
+            0, 2,                       // type = ET_EXEC (executable file)
+            0, 0,                       // machine = EM_NONE
+            0, 0, 0, 1,                 // version = 1
+            0xaa, 0xbb, 0xcc, 0xdd,     // entry point
+            0, 0, 0, 0,                 // ph_off
+            0, 0, 0, 0x34,              // sh_off
+            0, 0, 0, 0,                 // flags
+            0, 0x34,                    // ehsize
+            0, 0,                       // phentsize
+            0, 0,                       // phnum
+            0, 0x28,                    // shentsize
+            0, 2,                       // shnum
+            0, 0,                       // shstrndx
+
+            // .shstrtab section header
+            0, 0, 0, 1,                 // name
+            0, 0, 0, 3,                 // type = SHT_STRTAB
+            0, 0, 0, 0x20,              // flags = SHF_STRINGS
+            0, 0, 0, 0,                 // addr
+            0, 0, 0, 0x84,              // offset
+            0, 0, 0, 0x10,              // size
+            0, 0, 0, 0,                 // link
+            0, 0, 0, 0,                 // info
+            0, 0, 0, 1,                 // addralign
+            0, 0, 0, 0,                 // entsize
+
+            // .shstrtab section header
+            0, 0, 0, 0xb,               // name
+            0, 0, 0, 8,                 // type = SHT_NOBITS
+            0, 0, 0, 0,                 // flags = 0
+            0, 0, 0x01, 0x00,           // addr
+            0, 0, 0x01, 0x00,           // offset
+            0, 0, 0x01, 0x00,           // size
+            0, 0, 0, 0,                 // link
+            0, 0, 0, 0,                 // info
+            0, 0, 0, 1,                 // addralign
+            0, 0, 0, 0,                 // entsize
+
+            // .shstrtab section content
+            0,
+            b'.', b's', b'h', b's',
+            b't', b'r', b't', b'a',
+            b'b', 0, b'.', b'b',
+            b's', b's', 0
+        ];
+
+        let parser = ElfParser::from_bytes(&data).unwrap();
+        assert_eq!(
+            parser.sections,
+
+            vec![
+                ElfSection {
+                    name: b".shstrtab",
+                    typ: ElfSectionHeaderType::Strtab,
+                    flags: 0x20,
+                    addr: 0,
+                    link: 0,
+                    info: 0,
+                    addralign: 1,
+                    entsize: 0,
+                    content: &[
+                        0,
+                        b'.', b's', b'h', b's',
+                        b't', b'r', b't', b'a',
+                        b'b', 0, b'.', b'b', b's',
+                        b's', 0
+                    ],
+                },
+
+                ElfSection {
+                    name: b".bss",
+                    typ: ElfSectionHeaderType::Nobits,
+                    flags: 0,
+                    addr: 0x0100,
+                    link: 0,
+                    info: 0,
+                    addralign: 1,
+                    entsize: 0,
+                    content: &[ ],
+                }
+            ]
+        );
+    }
 }

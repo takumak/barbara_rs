@@ -11,7 +11,10 @@ use crate::raw::{
         ELF_IDENT_SIZE,
     },
     header::ElfHeader,
-    section_header::ElfSectionHeader,
+    section_header::{
+        ElfSectionHeader,
+        ElfSectionHeaderType,
+    }
 };
 
 pub struct SectionParser<H, SH>
@@ -67,17 +70,22 @@ where H: Unpacker + ElfHeader,
                 Errno::EINVAL,
                 format!("Failed to parse elf section header: {}", idx))))?;
 
-        let off = sh.get_offset() as usize;
-        let size = sh.get_size() as usize;
-        if data.len() < (off + size) {
-            return Err(ElfParserError::new(
-                Errno::EINVAL,
-                format!("Elf section content out of range: \
-                         section={:#x}--{:#x}, filesize={:#x}",
-                        off, off + size, data.len())))
-        }
-
-        Ok((sh, &data[off..(off+size)]))
+        let content =
+            if sh.get_type() != ElfSectionHeaderType::Nobits {
+                let off = sh.get_offset() as usize;
+                let size = sh.get_size() as usize;
+                if data.len() < (off + size) {
+                    return Err(ElfParserError::new(
+                        Errno::EINVAL,
+                        format!("Elf section content out of range: \
+                                 section={:#x}--{:#x}, filesize={:#x}",
+                                off, off + size, data.len())))
+                }
+                &data[off..(off+size)]
+            } else {
+                &[]
+            };
+        Ok((sh, content))
     }
 }
 
