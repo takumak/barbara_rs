@@ -17,7 +17,7 @@ pub enum ElfSymbolType {
 }
 
 #[derive(PartialEq, Debug)]
-pub enum SymbolBind {
+pub enum ElfSymbolBind {
     Local,
     Global,
     Weak,
@@ -59,17 +59,17 @@ impl<'a> Symbol<'a> {
         }
     }
 
-    pub fn get_bind(&self) -> SymbolBind {
+    pub fn get_bind(&self) -> ElfSymbolBind {
         match (self.info >> 4) & 0xf {
-            0  => SymbolBind::Local,
-            1  => SymbolBind::Global,
-            2  => SymbolBind::Weak,
-            3  => SymbolBind::Num,
-            10 => SymbolBind::GnuUnique,
-            12 => SymbolBind::Hios,
-            13 => SymbolBind::Loproc,
-            15 => SymbolBind::Hiproc,
-            b  => SymbolBind::Unknown(b),
+            0  => ElfSymbolBind::Local,
+            1  => ElfSymbolBind::Global,
+            2  => ElfSymbolBind::Weak,
+            3  => ElfSymbolBind::Num,
+            10 => ElfSymbolBind::GnuUnique,
+            12 => ElfSymbolBind::Hios,
+            13 => ElfSymbolBind::Loproc,
+            15 => ElfSymbolBind::Hiproc,
+            b  => ElfSymbolBind::Unknown(b),
         }
     }
 }
@@ -78,7 +78,7 @@ impl<'a> Symbol<'a> {
 mod tests {
     use crate::symbol::{
         ElfSymbolType,
-        SymbolBind,
+        ElfSymbolBind,
         Symbol,
     };
 
@@ -96,13 +96,13 @@ mod tests {
 
     #[test]
     fn symbolbind_partialeq() {
-        let a = SymbolBind::Global;
-        assert_eq!(a, SymbolBind::Global);
+        let a = ElfSymbolBind::Global;
+        assert_eq!(a, ElfSymbolBind::Global);
     }
 
     #[test]
     fn symbolbind_debug() {
-        let a = SymbolBind::Global;
+        let a = ElfSymbolBind::Global;
         assert_eq!(format!("{:?}", a), "Global");
     }
 
@@ -164,16 +164,16 @@ mod tests {
         };
         a.info = 0x30;
         assert_eq!(a.get_type(), ElfSymbolType::Notype);
-        assert_eq!(a.get_bind(), SymbolBind::Num);
+        assert_eq!(a.get_bind(), ElfSymbolBind::Num);
         a.info = 0x21;
         assert_eq!(a.get_type(), ElfSymbolType::Object);
-        assert_eq!(a.get_bind(), SymbolBind::Weak);
+        assert_eq!(a.get_bind(), ElfSymbolBind::Weak);
         a.info = 0x12;
         assert_eq!(a.get_type(), ElfSymbolType::Func);
-        assert_eq!(a.get_bind(), SymbolBind::Global);
+        assert_eq!(a.get_bind(), ElfSymbolBind::Global);
         a.info = 0x03;
         assert_eq!(a.get_type(), ElfSymbolType::Section);
-        assert_eq!(a.get_bind(), SymbolBind::Local);
+        assert_eq!(a.get_bind(), ElfSymbolBind::Local);
         a.info = 0x04;
         assert_eq!(a.get_type(), ElfSymbolType::File);
         a.info = 0x05;
@@ -184,19 +184,19 @@ mod tests {
         assert_eq!(a.get_type(), ElfSymbolType::Num);
         a.info = 0xfa;
         assert_eq!(a.get_type(), ElfSymbolType::GnuIfunc);
-        assert_eq!(a.get_bind(), SymbolBind::Hiproc);
+        assert_eq!(a.get_bind(), ElfSymbolBind::Hiproc);
         a.info = 0xdc;
         assert_eq!(a.get_type(), ElfSymbolType::Hios);
-        assert_eq!(a.get_bind(), SymbolBind::Loproc);
+        assert_eq!(a.get_bind(), ElfSymbolBind::Loproc);
         a.info = 0xcd;
         assert_eq!(a.get_type(), ElfSymbolType::Loproc);
-        assert_eq!(a.get_bind(), SymbolBind::Hios);
+        assert_eq!(a.get_bind(), ElfSymbolBind::Hios);
         a.info = 0xaf;
         assert_eq!(a.get_type(), ElfSymbolType::Hiproc);
-        assert_eq!(a.get_bind(), SymbolBind::GnuUnique);
+        assert_eq!(a.get_bind(), ElfSymbolBind::GnuUnique);
 
         a.info = 0x98;
         assert_eq!(a.get_type(), ElfSymbolType::Unknown(8));
-        assert_eq!(a.get_bind(), SymbolBind::Unknown(9));
+        assert_eq!(a.get_bind(), ElfSymbolBind::Unknown(9));
     }
 }
