@@ -5,16 +5,14 @@ extern crate stpack;
 use stpack::{unpacker, Unpacker};
 
 use crate::{
+    ElfClass,
+    ElfEndian,
     ElfParserError,
     ElfSection,
     ElfSymbol,
 };
 
 use crate::raw::{
-    ident::{
-        ElfClass,
-        ElfEndian,
-    },
     section_header::ElfSectionHeaderType,
 };
 
@@ -167,12 +165,10 @@ impl<'a> Iterator for ElfSymtabIterator<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
+        ElfClass,
+        ElfEndian,
         ElfSection,
         ElfSymbol,
-        raw::ident::{
-            ElfClass,
-            ElfEndian,
-        },
         raw::section_header::ElfSectionHeaderType,
         symtab::{
             ElfSymtabIterator,

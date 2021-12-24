@@ -73,11 +73,11 @@ pub fn parse_ident(data: &[u8]) -> Result<(ElfClass, ElfEndian), ElfParserError>
 
 #[cfg(test)]
 mod tests {
-    use crate::raw::ident::{
+    use crate::{
         ElfClass,
         ElfEndian,
-        parse_ident,
     };
+    use crate::raw::ident::parse_ident;
 
     #[test]
     fn elfclass_partialeq() {

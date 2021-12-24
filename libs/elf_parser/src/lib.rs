@@ -14,11 +14,14 @@ pub use symbol::{
     ElfSymbolType,
 };
 
-use raw::{
+pub use raw::{
     ident::{
         ElfClass,
         ElfEndian,
     },
+};
+
+use raw::{
     header::ElfHeader,
     section_header::{
         ElfSectionHeader,
@@ -120,13 +123,11 @@ impl<'a> ElfParser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
+        ElfClass,
+        ElfEndian,
         ElfParser,
         ElfSection,
         ElfSymbol,
-        raw::ident::{
-            ElfClass,
-            ElfEndian,
-        },
         ElfSectionHeaderType,
     };
 

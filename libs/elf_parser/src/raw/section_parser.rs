@@ -4,12 +4,13 @@ use posix::Errno;
 extern crate stpack;
 use stpack::Unpacker;
 
-use crate::ElfParserError;
+use crate::{
+    ElfEndian,
+    ElfParserError,
+};
+
 use crate::raw::{
-    ident::{
-        ElfEndian,
-        ELF_IDENT_SIZE,
-    },
+    ident::ELF_IDENT_SIZE,
     header::ElfHeader,
     section_header::{
         ElfSectionHeader,
@@ -92,8 +93,8 @@ where H: Unpacker + ElfHeader,
 
 #[cfg(test)]
 mod tests {
+    use crate::ElfEndian;
     use crate::raw::{
-        ident::ElfEndian,
         header::{
             Elf32Header,
             Elf64Header,
