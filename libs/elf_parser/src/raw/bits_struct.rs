@@ -83,10 +83,11 @@ macro_rules! bits_struct {
 
     /**** entrypoint ****/
 
-    {$tvis:vis trait $tname:ident;
+    {$tvis:vis trait $tname:ident
+     { $($tbody:tt)* }
      { $($structs:tt)+ }
      { $($fields:tt)+ }} => {
-        bits_struct!{@trait $tvis trait $tname { } { $($fields)+ }}
+        bits_struct!{@trait $tvis trait $tname { $($tbody)* } { $($fields)+ }}
         bits_struct!{@structs $tname { $($structs)+ } { } { } { $($fields)+ }}
     };
 }
@@ -95,11 +96,11 @@ macro_rules! bits_struct {
 
 Example:
     bits_struct! {
-        pub trait Header;
+        pub trait Header {}
         {
             pub struct Header32;
             pub struct Header64;
-        };
+        }
         {
             pub addr: {u32, u64,} get_addr(u64);
         }

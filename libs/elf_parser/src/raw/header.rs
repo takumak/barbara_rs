@@ -4,7 +4,7 @@ use stpack::unpacker;
 use crate::bits_struct;
 
 bits_struct! {
-    pub trait ElfHeader;
+    pub trait ElfHeader { }
     {
         pub struct Elf32Header;
         pub struct Elf64Header;
