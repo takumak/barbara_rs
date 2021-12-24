@@ -6,14 +6,14 @@ use stpack::{unpacker, Unpacker};
 
 use crate::ElfSection;
 use crate::err::ElfParserError;
-use crate::raw::ident::{
-    ElfClass,
-    ElfEndian,
+use crate::raw::{
+    ident::{
+        ElfClass,
+        ElfEndian,
+    },
+    section_header::ElfSectionHeaderType,
 };
 use crate::symbol::Symbol;
-
-const SHT_SYMTAB: u32 = 2;
-const SHT_STRTAB: u32 = 3;
 
 unpacker! {
     pub struct Elf32SymtabEntry {
@@ -74,7 +74,7 @@ impl<'a> Iterator for SymtabIterator<'a> {
             }
 
             let sec = &self.sections[secidx];
-            if sec.typ == SHT_SYMTAB {
+            if sec.typ == ElfSectionHeaderType::Symtab {
                 if sec.entsize == 0 {
                     return Some(Err(ElfParserError::new(
                         Errno::EINVAL, String::from("Symtab section entry size is 0 (file broken)"))))
@@ -137,7 +137,7 @@ impl<'a> Iterator for SymtabIterator<'a> {
         }
 
         let strtab_sec = &self.sections[sec.link as usize];
-        if strtab_sec.typ != SHT_STRTAB {
+        if strtab_sec.typ != ElfSectionHeaderType::Strtab {
             return Some(Err(ElfParserError::new(
                 Errno::EINVAL,
                 format!("Symtab linked section is not SHT_STRTAB: {}", sec.link))));
@@ -169,12 +169,11 @@ mod tests {
             ElfClass,
             ElfEndian,
         },
+        raw::section_header::ElfSectionHeaderType,
         symtab::{
             SymtabIterator,
             Elf32SymtabEntry,
             Elf64SymtabEntry,
-            SHT_SYMTAB,
-            SHT_STRTAB,
         },
         symbol::Symbol,
         stpack::Unpacker,
@@ -186,7 +185,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_SYMTAB,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 2,
@@ -198,7 +197,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_SYMTAB,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 2,
@@ -217,7 +216,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_STRTAB,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0,
                 addr: 0,
                 link: 0,
@@ -257,7 +256,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_SYMTAB,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 1,
@@ -276,7 +275,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_STRTAB,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0,
                 addr: 0,
                 link: 0,
@@ -305,7 +304,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_SYMTAB,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 1,
@@ -324,7 +323,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_STRTAB,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0,
                 addr: 0,
                 link: 0,
@@ -353,7 +352,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_SYMTAB,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 2,
@@ -372,7 +371,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_STRTAB,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0,
                 addr: 0,
                 link: 0,
@@ -401,7 +400,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_SYMTAB,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 1,
@@ -422,7 +421,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_STRTAB,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0,
                 addr: 0,
                 link: 0,
@@ -462,7 +461,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_SYMTAB,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 1,
@@ -483,7 +482,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_STRTAB,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0,
                 addr: 0,
                 link: 0,
@@ -512,7 +511,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_SYMTAB,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 1,
@@ -531,7 +530,7 @@ mod tests {
 
             ElfSection {
                 name: b"",
-                typ: SHT_SYMTAB,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 0,

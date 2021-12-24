@@ -13,7 +13,10 @@ use raw::{
         ElfEndian,
     },
     header::ElfHeader,
-    section_header::ElfSectionHeader,
+    section_header::{
+        ElfSectionHeader,
+        ElfSectionHeaderType,
+    }
 };
 use symtab::SymtabIterator;
 
@@ -22,7 +25,7 @@ pub use symbol::SymbolType;
 #[derive(PartialEq, Debug)]
 struct ElfSection<'a> {
     name: &'a [u8],
-    typ: u32,
+    typ: ElfSectionHeaderType,
     flags: u64,
     addr: u64,
     link: u32,
@@ -118,7 +121,8 @@ mod tests {
         raw::ident::{
             ElfClass,
             ElfEndian,
-        }
+        },
+        ElfSectionHeaderType,
     };
 
     #[test]
@@ -173,7 +177,7 @@ mod tests {
             vec![
                 ElfSection {
                     name: b".shstrtab",
-                    typ: 3,
+                    typ: ElfSectionHeaderType::Strtab,
                     flags: 0x20,
                     addr: 0,
                     link: 0,
@@ -375,7 +379,7 @@ mod tests {
             vec![
                 ElfSection {
                     name: b".shstrtab",
-                    typ: 3,
+                    typ: ElfSectionHeaderType::Strtab,
                     flags: 0x20,
                     addr: 0,
                     link: 0,
@@ -447,7 +451,7 @@ mod tests {
     fn elfsection_partialeq() {
         let sec1 = ElfSection {
             name: b"foo",
-            typ: 0,
+            typ: ElfSectionHeaderType::Null,
             flags: 1,
             addr: 2,
             link: 3,
@@ -459,7 +463,7 @@ mod tests {
 
         let sec2 = ElfSection {
             name: b"bar",
-            typ: 0,
+            typ: ElfSectionHeaderType::Null,
             flags: 1,
             addr: 2,
             link: 3,
@@ -476,7 +480,7 @@ mod tests {
     fn elfsection_debug() {
         let sec = ElfSection {
             name: b"foo",
-            typ: 0,
+            typ: ElfSectionHeaderType::Null,
             flags: 1,
             addr: 2,
             link: 3,
@@ -489,7 +493,7 @@ mod tests {
         assert_eq!(format!("{:?}", sec),
                    "ElfSection { \
                     name: [102, 111, 111], \
-                    typ: 0, \
+                    typ: Null, \
                     flags: 1, \
                     addr: 2, \
                     link: 3, \
@@ -636,7 +640,7 @@ mod tests {
             p.sections[0],
             ElfSection {
                 name: b".shstrtab",
-                typ: 3,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0x20,
                 addr: 0,
                 link: 0,
@@ -659,7 +663,7 @@ mod tests {
             p.sections[1],
             ElfSection {
                 name: b".strtab",
-                typ: 3,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0x20,
                 addr: 0,
                 link: 0,
@@ -679,7 +683,7 @@ mod tests {
             p.sections[2],
             ElfSection {
                 name: b".symtab",
-                typ: 2,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 1,
@@ -836,7 +840,7 @@ mod tests {
             p.sections[0],
             ElfSection {
                 name: b".shstrtab",
-                typ: 3,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0x20,
                 addr: 0,
                 link: 0,
@@ -859,7 +863,7 @@ mod tests {
             p.sections[1],
             ElfSection {
                 name: b".strtab",
-                typ: 3,
+                typ: ElfSectionHeaderType::Strtab,
                 flags: 0x20,
                 addr: 0,
                 link: 0,
@@ -879,7 +883,7 @@ mod tests {
             p.sections[2],
             ElfSection {
                 name: b".symtab",
-                typ: 2,
+                typ: ElfSectionHeaderType::Symtab,
                 flags: 0,
                 addr: 0,
                 link: 1,
