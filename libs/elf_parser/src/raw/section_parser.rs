@@ -16,7 +16,7 @@ use crate::raw::{
     section_header::ElfSectionHeader,
 };
 
-pub struct SectionParser<H, SH>
+pub(crate) struct SectionParser<H, SH>
 where H: Unpacker + ElfHeader,
       SH: Unpacker + ElfSectionHeader,
 {

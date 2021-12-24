@@ -14,7 +14,7 @@ use crate::{
 };
 
 unpacker! {
-    pub struct Elf32SymtabEntry {
+    pub(crate) struct Elf32SymtabEntry {
         pub name: u32,
         pub value: u32,
         pub size: u32,
@@ -25,7 +25,7 @@ unpacker! {
 }
 
 unpacker! {
-    pub struct Elf64SymtabEntry {
+    pub(crate) struct Elf64SymtabEntry {
         pub name: u32,
         pub info: u8,
         pub other: u8,

@@ -15,7 +15,7 @@ pub enum ElfEndian {
     ElfBE,
 }
 
-pub const ELF_IDENT_SIZE: usize = 16;
+pub(crate) const ELF_IDENT_SIZE: usize = 16;
 
 const MAGIC: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
@@ -35,7 +35,7 @@ const DATA2MSB: u8 = 2;
 
 const EV_CURRENT: u8 = 1;
 
-pub fn parse_ident(data: &[u8]) -> Result<(ElfClass, ElfEndian), ElfParserError> {
+pub(crate) fn parse_ident(data: &[u8]) -> Result<(ElfClass, ElfEndian), ElfParserError> {
     if data.len() < ELF_IDENT_SIZE {
         return Err(ElfParserError::new(
             Errno::EINVAL, String::from("File size too small")));

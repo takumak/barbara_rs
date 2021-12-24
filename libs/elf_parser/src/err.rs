@@ -7,7 +7,7 @@ pub struct ElfParserError {
 }
 
 impl ElfParserError {
-    pub fn new(errno: posix::Errno, message: String) -> Self {
+    pub(crate) fn new(errno: posix::Errno, message: String) -> Self {
         Self {
             errno,
             message,

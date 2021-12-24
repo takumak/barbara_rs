@@ -1,4 +1,4 @@
-pub fn read_at<'a>(strtab: &'a [u8], offset: usize) -> &'a [u8] {
+pub(crate) fn read_at<'a>(strtab: &'a [u8], offset: usize) -> &'a [u8] {
     if offset >= strtab.len() {
         return &[];
     }

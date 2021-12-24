@@ -4,10 +4,10 @@ use stpack::unpacker;
 use crate::bits_struct;
 
 bits_struct! {
-    pub trait ElfHeader { }
+    pub(crate) trait ElfHeader { }
     {
-        pub struct Elf32Header;
-        pub struct Elf64Header;
+        pub(crate) struct Elf32Header;
+        pub(crate) struct Elf64Header;
     }
     {
         pub typ:       {u16, u16,} get_type(u16);

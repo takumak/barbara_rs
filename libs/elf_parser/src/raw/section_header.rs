@@ -27,7 +27,7 @@ pub enum ElfSectionHeaderType {
 }
 
 bits_struct! {
-    pub trait ElfSectionHeader {
+    pub(crate) trait ElfSectionHeader {
         fn get_type(&self) -> ElfSectionHeaderType {
             match self.get_type_value() {
                 0 => ElfSectionHeaderType::Null,
@@ -53,8 +53,8 @@ bits_struct! {
         }
     }
     {
-        pub struct Elf32SectionHeader;
-        pub struct Elf64SectionHeader;
+        pub(crate) struct Elf32SectionHeader;
+        pub(crate) struct Elf64SectionHeader;
     }
     {
         pub name: {u32, u32,} get_name(u32);
