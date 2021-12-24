@@ -41,7 +41,7 @@ impl CharCounter {
         let mut chr_cnt: Vec<(u8, usize)> =
             self.table.iter().enumerate().map(|(c, s)| (c as u8, *s)).collect();
         chr_cnt.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-        chr_cnt.into_iter().take_while(|(c, s)| *s != 0)
+        chr_cnt.into_iter().take_while(|(_c, s)| *s != 0)
     }
 }
 
