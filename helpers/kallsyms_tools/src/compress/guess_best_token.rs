@@ -3,9 +3,19 @@ use kmp_search::kmp_search_all;
 
 use crate::compress::char_counter::CharCounter;
 
+fn calc_score(len: usize, count: usize) -> usize {
+    let plain_len = len * count;
+    let compressed_len = 1 + len + count;
+    if compressed_len > plain_len {
+        (1usize << (usize::BITS - 1)) - (compressed_len - plain_len)
+    } else {
+        (1usize << (usize::BITS - 1)) + (plain_len - compressed_len)
+    }
+}
+
 fn enlarge(symbols: &[&[u8]], mut token: Vec<u8>, count: usize, right: bool) -> (Vec<u8>, usize) {
     let mut new_scores: Vec<(usize, usize)> =
-        vec![(token.len() * count, count)];
+        vec![(calc_score(token.len(), count), count)];
 
     loop {
         let mut tbl: [usize; 256] = [0; 256];
@@ -42,7 +52,7 @@ fn enlarge(symbols: &[&[u8]], mut token: Vec<u8>, count: usize, right: bool) -> 
         } else {
             token.insert(0, best_chr);
         }
-        new_scores.push((token.len() * best_cnt, best_cnt));
+        new_scores.push((calc_score(token.len(), best_cnt), best_cnt));
     }
 
     let mut max_i = 0usize;
