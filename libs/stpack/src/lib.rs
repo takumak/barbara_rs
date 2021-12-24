@@ -4,7 +4,7 @@ pub trait Stpack: Sized {
 }
 
 #[macro_export]
-macro_rules! unpacker {
+macro_rules! stpack {
     {@constructor_from <le> $ftyp:ty} => {
         <$ftyp>::from_le_bytes
     };
@@ -14,10 +14,10 @@ macro_rules! unpacker {
     };
 
     {@constructor_one <$lebe:ident> $data:ident, $ftyp:ty { $($p:tt)* }} => {
-        unpacker!{@constructor_from <$lebe> $ftyp}
+        stpack!{@constructor_from <$lebe> $ftyp}
         (<[u8; core::mem::size_of::<$ftyp>()]>::try_from(
-            &$data[(unpacker!{@allsize $($p)*})..
-                   (unpacker!{@allsize $($p)*}+(core::mem::size_of::<$ftyp>()))]
+            &$data[(stpack!{@allsize $($p)*})..
+                   (stpack!{@allsize $($p)*}+(core::mem::size_of::<$ftyp>()))]
         ).unwrap())
     };
 
@@ -34,7 +34,7 @@ macro_rules! unpacker {
      { $($p:tt)* },
      { $vis:vis $fname:ident : $ftyp:ty }} =>
     {
-        unpacker!{@constructor <$lebe> $data {$($result)*}, {$($p)*}, {$vis $fname : $ftyp,}}
+        stpack!{@constructor <$lebe> $data {$($result)*}, {$($p)*}, {$vis $fname : $ftyp,}}
     };
 
     {@constructor <$lebe:ident> $data:ident
@@ -42,10 +42,10 @@ macro_rules! unpacker {
      { $($p:tt)* },
      { $vis:vis $fname:ident : $ftyp:ty, $($body:tt)* }} =>
     {
-        unpacker!{
+        stpack!{
             @constructor <$lebe> $data
             {$($result)*
-             $fname: unpacker!{@constructor_one <$lebe> $data, $ftyp { $($p)* }},},
+             $fname: stpack!{@constructor_one <$lebe> $data, $ftyp { $($p)* }},},
             {$($p)* $vis $fname : $ftyp, },
             { $($body)* }}
     };
@@ -55,16 +55,16 @@ macro_rules! unpacker {
     };
 
     {@allsize $vis:vis $fname:ident : $ftyp:ty} => {
-        unpacker!{@allsize $vis $fname : $ftyp,}
+        stpack!{@allsize $vis $fname : $ftyp,}
     };
 
     {@allsize $vis:vis $fname:ident : $ftyp:ty, $($body:tt)*} => {
-        core::mem::size_of::<$ftyp>() + unpacker!{@allsize $($body)*}
+        core::mem::size_of::<$ftyp>() + stpack!{@allsize $($body)*}
     };
 
     {@impl $stname:ident { $($body:tt)* }} => {
         impl $crate::Stpack for $stname {
-            const SIZE: usize = unpacker!{@allsize $($body)*};
+            const SIZE: usize = stpack!{@allsize $($body)*};
 
             fn unpack(data: &[u8], le: bool) -> Result<(Self, &[u8]), ()> {
                 if data.len() < Self::SIZE {
@@ -73,9 +73,9 @@ macro_rules! unpacker {
                     let (data, right) = data.split_at(Self::SIZE);
                     let r =
                         if le {
-                            unpacker!{@constructor <le> data { }, { }, { $($body)* }}
+                            stpack!{@constructor <le> data { }, { }, { $($body)* }}
                         } else {
-                            unpacker!{@constructor <be> data { }, { }, { $($body)* }}
+                            stpack!{@constructor <be> data { }, { }, { $($body)* }}
                         };
 
                     Ok((r, right))
@@ -87,7 +87,7 @@ macro_rules! unpacker {
     {$(#[$attr:meta])* $vis:vis struct $stname:ident { $($body:tt)* }} => {
         $(#[$attr])*
         $vis struct $stname { $($body)* }
-        unpacker!{@impl $stname { $($body)* }}
+        stpack!{@impl $stname { $($body)* }}
     };
 }
 
@@ -95,7 +95,7 @@ macro_rules! unpacker {
 mod tests {
     use crate::Stpack;
 
-    unpacker! {
+    stpack! {
         #[derive(PartialEq, Eq, Debug)]
         struct Foo {
             foo: u8,

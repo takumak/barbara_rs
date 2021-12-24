@@ -1,5 +1,5 @@
 extern crate stpack;
-use stpack::unpacker;
+use stpack::stpack;
 
 use crate::bits_struct;
 

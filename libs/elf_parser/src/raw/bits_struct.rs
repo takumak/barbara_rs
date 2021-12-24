@@ -7,7 +7,7 @@ macro_rules! bits_struct {
      { $($fields:tt)* }
      { $($methods:tt)* }
      { }} => {
-        unpacker! {
+        stpack! {
             $svis struct $sname {
                 $($fields)*
             }

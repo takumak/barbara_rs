@@ -2,7 +2,7 @@ extern crate posix;
 use posix::Errno;
 
 extern crate stpack;
-use stpack::{unpacker, Stpack};
+use stpack::{stpack, Stpack};
 
 use crate::{
     ElfClass,
@@ -13,7 +13,7 @@ use crate::{
     ElfSymbol,
 };
 
-unpacker! {
+stpack! {
     pub(crate) struct Elf32SymtabEntry {
         pub name: u32,
         pub value: u32,
@@ -24,7 +24,7 @@ unpacker! {
     }
 }
 
-unpacker! {
+stpack! {
     pub(crate) struct Elf64SymtabEntry {
         pub name: u32,
         pub info: u8,
