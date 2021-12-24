@@ -29,7 +29,7 @@ pub fn make_dic(syms: Vec<&[u8]>) -> Vec<(Vec<u8>, usize)> {
     let mut dic: Vec<(Vec<u8>, usize)> = Vec::new();
 
     let mut chars = CharCounter::new();
-    let mut update_chars = |chars: &mut CharCounter, syms: &Vec<&[u8]>| {
+    let update_chars = |chars: &mut CharCounter, syms: &Vec<&[u8]>| {
         chars.clear();
         for sym in syms.iter() {
             chars.count_up(sym.iter());
