@@ -13,7 +13,7 @@ use crate::raw::{
     },
     section_header::ElfSectionHeaderType,
 };
-use crate::symbol::Symbol;
+use crate::symbol::ElfSymbol;
 
 unpacker! {
     pub struct Elf32SymtabEntry {
@@ -61,7 +61,7 @@ impl<'a> ElfSymtabIterator<'a> {
 }
 
 impl<'a> Iterator for ElfSymtabIterator<'a> {
-    type Item = Result<Symbol<'a>, ElfParserError>;
+    type Item = Result<ElfSymbol<'a>, ElfParserError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut secidx = self.curr_secidx;
@@ -150,7 +150,7 @@ impl<'a> Iterator for ElfSymtabIterator<'a> {
 
         self.curr_symidx = symidx + 1;
 
-        Some(Ok(Symbol {
+        Some(Ok(ElfSymbol {
             name,
             value,
             size,
@@ -175,7 +175,7 @@ mod tests {
             Elf32SymtabEntry,
             Elf64SymtabEntry,
         },
-        symbol::Symbol,
+        symbol::ElfSymbol,
         stpack::Unpacker,
     };
 
@@ -236,9 +236,9 @@ mod tests {
                                    ElfEndian::ElfBE,
                                    &sections)
                 .map(|r| r.unwrap())
-                .collect::<Vec<Symbol>>(),
+                .collect::<Vec<ElfSymbol>>(),
             vec![
-                Symbol {
+                ElfSymbol {
                     name: b"test",
                     value: 0x11223344u64,
                     size: 0,
@@ -441,9 +441,9 @@ mod tests {
                                    ElfEndian::ElfLE,
                                    &sections)
                 .map(|r| r.unwrap())
-                .collect::<Vec<Symbol>>(),
+                .collect::<Vec<ElfSymbol>>(),
             vec![
-                Symbol {
+                ElfSymbol {
                     name: b"test",
                     value: 0x8899aabb_ccddeeffu64,
                     size: 0,

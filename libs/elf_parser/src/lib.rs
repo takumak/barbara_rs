@@ -117,7 +117,7 @@ mod tests {
     use crate::{
         ElfParser,
         ElfSection,
-        symbol::Symbol,
+        symbol::ElfSymbol,
         raw::ident::{
             ElfClass,
             ElfEndian,
@@ -711,13 +711,13 @@ mod tests {
 
         assert_eq!(p.sections.len(), 3);
 
-        let syms: Vec<Symbol> =
+        let syms: Vec<ElfSymbol> =
             p.iter_symbols().map(|r| r.unwrap()).collect();
 
         assert_eq!(
             syms,
             vec![
-                Symbol {
+                ElfSymbol {
                     name: b"test1",
                     value: 0x07060504_03020100u64,
                     size: 0,
@@ -725,7 +725,7 @@ mod tests {
                     other: 0,
                     shndx: 0,
                 },
-                Symbol {
+                ElfSymbol {
                     name: b"test2",
                     value: 0x05040302_01000908u64,
                     size: 0,
@@ -911,13 +911,13 @@ mod tests {
 
         assert_eq!(p.sections.len(), 3);
 
-        let syms: Vec<Symbol> =
+        let syms: Vec<ElfSymbol> =
             p.iter_symbols().map(|r| r.unwrap()).collect();
 
         assert_eq!(
             syms,
             vec![
-                Symbol {
+                ElfSymbol {
                     name: b"test1",
                     value: 0x03020100u64,
                     size: 0,
@@ -926,7 +926,7 @@ mod tests {
                     shndx: 0,
                 },
 
-                Symbol {
+                ElfSymbol {
                     name: b"test2",
                     value: 0x01000908u64,
                     size: 0,

@@ -31,7 +31,7 @@ pub enum ElfSymbolBind {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Symbol<'a> {
+pub struct ElfSymbol<'a> {
     pub name: &'a [u8],
     pub value: u64,
     pub size: u64,
@@ -40,7 +40,7 @@ pub struct Symbol<'a> {
     pub shndx: u16,
 }
 
-impl<'a> Symbol<'a> {
+impl<'a> ElfSymbol<'a> {
     pub fn get_type(&self) -> ElfSymbolType {
         match self.info & 0xf {
             0  => ElfSymbolType::Notype,
@@ -79,7 +79,7 @@ mod tests {
     use crate::symbol::{
         ElfSymbolType,
         ElfSymbolBind,
-        Symbol,
+        ElfSymbol,
     };
 
     #[test]
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn symbol_partialeq() {
-        let a = Symbol {
+        let a = ElfSymbol {
             name: &[],
             value: 0,
             size: 0,
@@ -117,7 +117,7 @@ mod tests {
             shndx: 0,
         };
 
-        let b = Symbol {
+        let b = ElfSymbol {
             name: &[],
             value: 0,
             size: 0,
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn symbol_debug() {
-        let a = Symbol {
+        let a = ElfSymbol {
             name: &[],
             value: 1,
             size: 2,
@@ -141,7 +141,7 @@ mod tests {
         };
         assert_eq!(
             format!("{:?}", a),
-            "Symbol { \
+            "ElfSymbol { \
              name: [], \
              value: 1, \
              size: 2, \
@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn symbol_get_type_get_bind() {
-        let mut a = Symbol {
+        let mut a = ElfSymbol {
             name: &[],
             value: 1,
             size: 2,
