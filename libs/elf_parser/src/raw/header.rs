@@ -33,7 +33,7 @@ mod tests {
         Elf32Header,
         Elf64Header,
     };
-    use crate::stpack::Unpacker;
+    use crate::stpack::Stpack;
 
     #[test]
     fn elf32header() {

@@ -2,7 +2,7 @@ extern crate posix;
 use posix::Errno;
 
 extern crate stpack;
-use stpack::{unpacker, Unpacker};
+use stpack::{unpacker, Stpack};
 
 use crate::{
     ElfClass,
@@ -172,7 +172,7 @@ mod tests {
             Elf32SymtabEntry,
             Elf64SymtabEntry,
         },
-        stpack::Unpacker,
+        stpack::Stpack,
     };
 
     #[test]

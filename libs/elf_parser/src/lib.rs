@@ -1,5 +1,5 @@
 extern crate stpack;
-use stpack::Unpacker;
+use stpack::Stpack;
 
 mod err;
 mod raw;
@@ -73,8 +73,8 @@ impl<'a> ElfParser<'a> {
 
     fn parse_sections<H, SH>(data: &'a [u8], class: ElfClass, endian: ElfEndian) ->
         Result<Self, ElfParserError>
-    where H: Unpacker + ElfHeader,
-          SH: Unpacker + ElfSectionHeader
+    where H: Stpack + ElfHeader,
+          SH: Stpack + ElfSectionHeader
     {
         use raw::{
             strtab,

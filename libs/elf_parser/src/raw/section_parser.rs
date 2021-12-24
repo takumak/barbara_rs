@@ -2,7 +2,7 @@ extern crate posix;
 use posix::Errno;
 
 extern crate stpack;
-use stpack::Unpacker;
+use stpack::Stpack;
 
 use crate::{
     ElfEndian,
@@ -17,8 +17,8 @@ use crate::raw::{
 };
 
 pub(crate) struct SectionParser<H, SH>
-where H: Unpacker + ElfHeader,
-      SH: Unpacker + ElfSectionHeader,
+where H: Stpack + ElfHeader,
+      SH: Stpack + ElfSectionHeader,
 {
     le: bool,
     pub header: H,
@@ -26,8 +26,8 @@ where H: Unpacker + ElfHeader,
 }
 
 impl<H, SH> SectionParser<H, SH>
-where H: Unpacker + ElfHeader,
-      SH: Unpacker + ElfSectionHeader,
+where H: Stpack + ElfHeader,
+      SH: Stpack + ElfSectionHeader,
 {
     pub fn new(data: &[u8], endian: ElfEndian) ->
         Result<Self, ElfParserError>
