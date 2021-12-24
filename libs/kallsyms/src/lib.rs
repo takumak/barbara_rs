@@ -1,4 +1,4 @@
-#![cfg_attr(not(test), no_std)]
+mod compress;
 
 pub struct KAllSyms {
     base: usize,

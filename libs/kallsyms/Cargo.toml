@@ -2,3 +2,6 @@
 name = "kallsyms"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+kmp_search = { path = "../kmp_search" }
