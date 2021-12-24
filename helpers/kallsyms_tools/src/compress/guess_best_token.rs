@@ -120,7 +120,7 @@ pub fn strictly_find_best_token<'a>(symbols: &'a [&'a [u8]]) -> (&'a [u8], usize
         }
     }
 
-    (best_token, best_score)
+    (best_token, best_score / best_token.len())
 }
 
 #[cfg(test)]
@@ -170,7 +170,7 @@ mod tests {
 
         assert_eq!(
             strictly_find_best_token(data),
-            (&b"abc"[..], 9usize)
+            (&b"abc"[..], 3)
         )
     }
 }
