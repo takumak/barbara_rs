@@ -37,7 +37,7 @@ unpacker! {
     }
 }
 
-pub struct SymtabIterator<'a> {
+pub struct ElfSymtabIterator<'a> {
     class: ElfClass,
     le: bool,
     sections: &'a Vec<ElfSection<'a>>,
@@ -45,7 +45,7 @@ pub struct SymtabIterator<'a> {
     curr_symidx: usize,
 }
 
-impl<'a> SymtabIterator<'a> {
+impl<'a> ElfSymtabIterator<'a> {
     pub(crate) fn new(class: ElfClass,
                       endian: ElfEndian,
                       sections: &'a Vec<ElfSection<'a>>) -> Self
@@ -60,7 +60,7 @@ impl<'a> SymtabIterator<'a> {
     }
 }
 
-impl<'a> Iterator for SymtabIterator<'a> {
+impl<'a> Iterator for ElfSymtabIterator<'a> {
     type Item = Result<Symbol<'a>, ElfParserError>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -171,7 +171,7 @@ mod tests {
         },
         raw::section_header::ElfSectionHeaderType,
         symtab::{
-            SymtabIterator,
+            ElfSymtabIterator,
             Elf32SymtabEntry,
             Elf64SymtabEntry,
         },
@@ -232,9 +232,9 @@ mod tests {
         ];
 
         assert_eq!(
-            SymtabIterator::new(ElfClass::Elf32,
-                                ElfEndian::ElfBE,
-                                &sections)
+            ElfSymtabIterator::new(ElfClass::Elf32,
+                                   ElfEndian::ElfBE,
+                                   &sections)
                 .map(|r| r.unwrap())
                 .collect::<Vec<Symbol>>(),
             vec![
@@ -291,7 +291,7 @@ mod tests {
         ];
 
         let mut iter =
-            SymtabIterator::new(
+            ElfSymtabIterator::new(
                 ElfClass::Elf32, ElfEndian::ElfBE, &sections);
 
         iter.next().unwrap().expect_err(
@@ -339,7 +339,7 @@ mod tests {
         ];
 
         let mut iter =
-            SymtabIterator::new(
+            ElfSymtabIterator::new(
                 ElfClass::Elf32, ElfEndian::ElfBE, &sections);
 
         iter.next().unwrap().expect_err(
@@ -387,7 +387,7 @@ mod tests {
         ];
 
         let mut iter =
-            SymtabIterator::new(
+            ElfSymtabIterator::new(
                 ElfClass::Elf32, ElfEndian::ElfBE, &sections);
 
         iter.next().unwrap().expect_err(
@@ -437,9 +437,9 @@ mod tests {
         ];
 
         assert_eq!(
-            SymtabIterator::new(ElfClass::Elf64,
-                                ElfEndian::ElfLE,
-                                &sections)
+            ElfSymtabIterator::new(ElfClass::Elf64,
+                                   ElfEndian::ElfLE,
+                                   &sections)
                 .map(|r| r.unwrap())
                 .collect::<Vec<Symbol>>(),
             vec![
@@ -498,7 +498,7 @@ mod tests {
         ];
 
         let mut iter =
-            SymtabIterator::new(
+            ElfSymtabIterator::new(
                 ElfClass::Elf64, ElfEndian::ElfLE, &sections);
 
         iter.next().unwrap().expect_err(
@@ -546,7 +546,7 @@ mod tests {
         ];
 
         let mut iter =
-            SymtabIterator::new(
+            ElfSymtabIterator::new(
                 ElfClass::Elf32, ElfEndian::ElfBE, &sections);
 
         iter.next().unwrap().expect_err(

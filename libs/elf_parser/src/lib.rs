@@ -18,7 +18,7 @@ use raw::{
         ElfSectionHeaderType,
     }
 };
-use symtab::SymtabIterator;
+use symtab::ElfSymtabIterator;
 
 pub use symbol::SymbolType;
 
@@ -103,8 +103,8 @@ impl<'a> ElfParser<'a> {
         })
     }
 
-    pub fn iter_symbols(&'a self) -> SymtabIterator<'a> {
-        SymtabIterator::new(
+    pub fn iter_symbols(&'a self) -> ElfSymtabIterator<'a> {
+        ElfSymtabIterator::new(
             self.class,
             self.endian,
             &self.sections)
