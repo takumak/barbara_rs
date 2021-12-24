@@ -3,8 +3,9 @@ use kmp_search::kmp_search_all;
 
 use crate::compress::char_counter::CharCounter;
 
-fn enlarge(symbols: &[&[u8]], mut token: Vec<u8>, score: usize, right: bool) -> (Vec<u8>, usize) {
-    let mut new_scores: Vec<usize> = vec![score];
+fn enlarge(symbols: &[&[u8]], mut token: Vec<u8>, count: usize, right: bool) -> (Vec<u8>, usize) {
+    let mut new_scores: Vec<(usize, usize)> =
+        vec![(token.len() * count, count)];
 
     loop {
         let mut tbl: [usize; 256] = [0; 256];
@@ -41,24 +42,22 @@ fn enlarge(symbols: &[&[u8]], mut token: Vec<u8>, score: usize, right: bool) -> 
         } else {
             token.insert(0, best_chr);
         }
-        new_scores.push(token.len() * best_cnt);
+        new_scores.push((token.len() * best_cnt, best_cnt));
     }
 
     let mut max_i = 0usize;
-    let mut max_score = new_scores[0];
     for i in 1..new_scores.len() {
-        if new_scores[i] >= max_score {
+        if new_scores[i].0 >= new_scores[max_i].0 {
             max_i = i;
-            max_score = new_scores[i];
         }
     }
 
     if right {
         let r = token.len() - (new_scores.len() - 1) + max_i;
-        (token[..r].to_vec(), max_score)
+        (token[..r].to_vec(), new_scores[max_i].1)
     } else {
         let l = new_scores.len() - 1 - max_i;
-        (token[l..].to_vec(), max_score)
+        (token[l..].to_vec(), new_scores[max_i].1)
     }
 }
 
@@ -68,14 +67,13 @@ pub fn guess_best_token<'a>(symbols: &'a [&'a [u8]]) -> (Vec<u8>, usize) {
         counter.count_up(sym.iter());
     }
 
-    let (chr, cnt) = counter.most_one().unwrap();
+    let (chr, mut count) = counter.most_one().unwrap();
     let mut token = vec![chr];
-    let mut score = cnt;
 
-    (token, score) = enlarge(symbols, token, score, false);
-    (token, score) = enlarge(symbols, token, score, true);
+    (token, count) = enlarge(symbols, token, count, false);
+    (token, count) = enlarge(symbols, token, count, true);
 
-    (token, score)
+    (token, count)
 }
 
 pub fn strictly_find_best_token<'a>(symbols: &'a [&'a [u8]]) -> (&'a [u8], usize) {
@@ -144,8 +142,7 @@ mod tests {
 
         assert_eq!(
             guess_best_token(data),
-            (b"_test_common_token_".to_vec(),
-             "_test_common_token_".len() * 5)
+            (b"_test_common_token_".to_vec(), 5)
         )
     }
 
@@ -159,7 +156,7 @@ mod tests {
 
         assert_eq!(
             guess_best_token(data),
-            (b"123abc".to_vec(), 6usize)
+            (b"123abc".to_vec(), 1)
         )
     }
 

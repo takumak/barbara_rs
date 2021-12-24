@@ -60,15 +60,15 @@ mod tests {
         assert_eq!(
             make_dic(syms),
             vec![
-                (b"_test_".to_vec(), 18),
+                (b"_test_".to_vec(), 3),
                 // this is local optimum result
                 // use strictly_find_best_token() to get best result
                 // -> the best second token is (b"bar".to_vec(), 6)
-                (b"bar1".to_vec(), 4),
-                (b"bar2".to_vec(), 4),
-                (b"456".to_vec(), 3),
-                (b"foo".to_vec(), 3),
-                (b"23".to_vec(), 2),
+                (b"bar1".to_vec(), 1),
+                (b"bar2".to_vec(), 1),
+                (b"456".to_vec(), 1),
+                (b"foo".to_vec(), 1),
+                (b"23".to_vec(), 1),
                 (b"1".to_vec(), 1),
             ]
         );
