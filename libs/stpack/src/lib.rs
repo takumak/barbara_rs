@@ -1,6 +1,15 @@
 pub trait Stpack: Sized {
     const SIZE: usize;
     fn unpack(data: &[u8], le: bool) -> Result<(Self, &[u8]), ()>;
+    fn pack(&self, le: bool) -> Vec<u8> {
+        if le {
+            self.pack_le()
+        } else {
+            self.pack_be()
+        }
+    }
+    fn pack_le(&self) -> Vec<u8>;
+    fn pack_be(&self) -> Vec<u8>;
 }
 
 #[macro_export]
@@ -50,6 +59,35 @@ macro_rules! stpack {
             { $($body)* }}
     };
 
+    {@pack $self:ident $name:ident $to_bytes:ident $out:ident
+     { $($result:tt)* }
+     { }} =>
+    {
+        fn $name(&$self) -> Vec<u8> {
+            let mut $out: Vec<u8> = Vec::new();
+            $($result)*
+            $out
+        }
+    };
+
+    {@pack $self:ident $name:ident $to_bytes:ident $out:ident
+     { $($result:tt)* }
+     { $vis:vis $fname:ident : $ftyp:ty }} =>
+    {
+        stpack!{@pack $self $name $to_bytes $out { $($result)* } { $vis $fname : $ftyp, }}
+    };
+
+    {@pack $self:ident $name:ident $to_bytes:ident $out:ident
+     { $($result:tt)* }
+     { $vis:vis $fname:ident : $ftyp:ty, $($body:tt)* }} =>
+    {
+        stpack!{
+            @pack $self $name $to_bytes $out
+            {$($result)*
+             $out.extend_from_slice(&$self.$fname.$to_bytes());}
+            { $($body)* }}
+    };
+
     {@allsize} => {
         0
     };
@@ -81,6 +119,9 @@ macro_rules! stpack {
                     Ok((r, right))
                 }
             }
+
+            stpack!{@pack self pack_le to_le_bytes result { } { $($body)* }}
+            stpack!{@pack self pack_be to_be_bytes result { } { $($body)* }}
         }
     };
 
@@ -112,8 +153,9 @@ mod tests {
     #[test]
     fn foo_le() {
         let data: Vec<u8> = (0..7).collect();
+        let foo = Foo::unpack(&data, true);
         assert_eq!(
-            Foo::unpack(&data, true),
+            foo,
             Ok((
                 Foo {
                     foo: 0x00,
@@ -123,10 +165,29 @@ mod tests {
                 &[] as &[u8]
             ))
         );
+        assert_eq!(foo.unwrap().0.pack(true), data);
     }
 
     #[test]
     fn test_be() {
+        let data: Vec<u8> = (0..7).collect();
+        let foo = Foo::unpack(&data, false);
+        assert_eq!(
+            foo,
+            Ok((
+                Foo {
+                    foo: 0x00,
+                    bar: 0x0102,
+                    baz: 0x03040506,
+                },
+                &[] as &[u8]
+            ))
+        );
+        assert_eq!(foo.unwrap().0.pack(false), data);
+    }
+
+    #[test]
+    fn test_remain_data() {
         let data: Vec<u8> = (0..10).collect();
         assert_eq!(
             Foo::unpack(&data, false),
