@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let mut counter = CharCounter::new();
+        let counter = CharCounter::new();
 
         assert_eq!(counter.most_one(), None);
 

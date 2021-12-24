@@ -21,7 +21,7 @@ fn enlarge(symbols: &[&[u8]], mut token: Vec<u8>, count: usize, right: bool) -> 
         let mut tbl: [usize; 256] = [0; 256];
 
         for sym in symbols {
-            let mut positions = kmp_search_all(
+            let positions = kmp_search_all(
                 &token,
                 if right {
                     &sym[..(sym.len() - 1)]
