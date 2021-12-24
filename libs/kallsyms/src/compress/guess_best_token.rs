@@ -86,6 +86,7 @@ pub fn guess_best_token<'a>(symbols: &'a [&'a [u8]]) -> (Vec<u8>, usize) {
     (token, count)
 }
 
+#[allow(dead_code)]
 pub fn strictly_find_best_token<'a>(symbols: &'a [&'a [u8]]) -> (&'a [u8], usize) {
     let mut suffix_array: Vec<&[u8]> = vec![];
     for sym in symbols {
