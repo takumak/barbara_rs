@@ -7,15 +7,13 @@ use stpack::Unpacker;
 use crate::{
     ElfEndian,
     ElfParserError,
+    ElfSectionHeaderType,
 };
 
 use crate::raw::{
     ident::ELF_IDENT_SIZE,
     header::ElfHeader,
-    section_header::{
-        ElfSectionHeader,
-        ElfSectionHeaderType,
-    }
+    section_header::ElfSectionHeader,
 };
 
 pub struct SectionParser<H, SH>

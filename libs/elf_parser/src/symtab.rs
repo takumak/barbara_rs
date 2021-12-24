@@ -7,13 +7,10 @@ use stpack::{unpacker, Unpacker};
 use crate::{
     ElfClass,
     ElfEndian,
+    ElfSectionHeaderType,
     ElfParserError,
     ElfSection,
     ElfSymbol,
-};
-
-use crate::raw::{
-    section_header::ElfSectionHeaderType,
 };
 
 unpacker! {
@@ -168,8 +165,8 @@ mod tests {
         ElfClass,
         ElfEndian,
         ElfSection,
+        ElfSectionHeaderType,
         ElfSymbol,
-        raw::section_header::ElfSectionHeaderType,
         symtab::{
             ElfSymtabIterator,
             Elf32SymtabEntry,

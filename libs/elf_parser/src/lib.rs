@@ -19,14 +19,12 @@ pub use raw::{
         ElfClass,
         ElfEndian,
     },
+    section_header::ElfSectionHeaderType,
 };
 
 use raw::{
     header::ElfHeader,
-    section_header::{
-        ElfSectionHeader,
-        ElfSectionHeaderType,
-    }
+    section_header::ElfSectionHeader,
 };
 use symtab::ElfSymtabIterator;
 
