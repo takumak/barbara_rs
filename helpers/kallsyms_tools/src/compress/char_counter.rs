@@ -7,6 +7,10 @@ impl CharCounter {
         Self { table: [0; 256] }
     }
 
+    pub fn len(&self) -> usize {
+        self.table.iter().filter(|c| **c > 0).count()
+    }
+
     pub fn count_up<'a>(&mut self, bytes: impl Iterator<Item = &'a u8>) {
         for c in bytes {
             self.table[*c as usize] += 1;
