@@ -20,7 +20,7 @@ use raw::{
 };
 use symtab::ElfSymtabIterator;
 
-pub use symbol::SymbolType;
+pub use symbol::ElfSymbolType;
 
 #[derive(PartialEq, Debug)]
 struct ElfSection<'a> {

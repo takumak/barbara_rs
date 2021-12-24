@@ -1,5 +1,5 @@
 #[derive(PartialEq, Debug)]
-pub enum SymbolType {
+pub enum ElfSymbolType {
     Notype,
     Object,
     Func,
@@ -41,21 +41,21 @@ pub struct Symbol<'a> {
 }
 
 impl<'a> Symbol<'a> {
-    pub fn get_type(&self) -> SymbolType {
+    pub fn get_type(&self) -> ElfSymbolType {
         match self.info & 0xf {
-            0  => SymbolType::Notype,
-            1  => SymbolType::Object,
-            2  => SymbolType::Func,
-            3  => SymbolType::Section,
-            4  => SymbolType::File,
-            5  => SymbolType::Common,
-            6  => SymbolType::Tls,
-            7  => SymbolType::Num,
-            10 => SymbolType::GnuIfunc,
-            12 => SymbolType::Hios,
-            13 => SymbolType::Loproc,
-            15 => SymbolType::Hiproc,
-            t  => SymbolType::Unknown(t),
+            0  => ElfSymbolType::Notype,
+            1  => ElfSymbolType::Object,
+            2  => ElfSymbolType::Func,
+            3  => ElfSymbolType::Section,
+            4  => ElfSymbolType::File,
+            5  => ElfSymbolType::Common,
+            6  => ElfSymbolType::Tls,
+            7  => ElfSymbolType::Num,
+            10 => ElfSymbolType::GnuIfunc,
+            12 => ElfSymbolType::Hios,
+            13 => ElfSymbolType::Loproc,
+            15 => ElfSymbolType::Hiproc,
+            t  => ElfSymbolType::Unknown(t),
         }
     }
 
@@ -77,20 +77,20 @@ impl<'a> Symbol<'a> {
 #[cfg(test)]
 mod tests {
     use crate::symbol::{
-        SymbolType,
+        ElfSymbolType,
         SymbolBind,
         Symbol,
     };
 
     #[test]
     fn symboltype_partialeq() {
-        let a = SymbolType::Object;
-        assert_eq!(a, SymbolType::Object);
+        let a = ElfSymbolType::Object;
+        assert_eq!(a, ElfSymbolType::Object);
     }
 
     #[test]
     fn symboltype_debug() {
-        let a = SymbolType::Object;
+        let a = ElfSymbolType::Object;
         assert_eq!(format!("{:?}", a), "Object");
     }
 
@@ -163,40 +163,40 @@ mod tests {
             shndx: 5,
         };
         a.info = 0x30;
-        assert_eq!(a.get_type(), SymbolType::Notype);
+        assert_eq!(a.get_type(), ElfSymbolType::Notype);
         assert_eq!(a.get_bind(), SymbolBind::Num);
         a.info = 0x21;
-        assert_eq!(a.get_type(), SymbolType::Object);
+        assert_eq!(a.get_type(), ElfSymbolType::Object);
         assert_eq!(a.get_bind(), SymbolBind::Weak);
         a.info = 0x12;
-        assert_eq!(a.get_type(), SymbolType::Func);
+        assert_eq!(a.get_type(), ElfSymbolType::Func);
         assert_eq!(a.get_bind(), SymbolBind::Global);
         a.info = 0x03;
-        assert_eq!(a.get_type(), SymbolType::Section);
+        assert_eq!(a.get_type(), ElfSymbolType::Section);
         assert_eq!(a.get_bind(), SymbolBind::Local);
         a.info = 0x04;
-        assert_eq!(a.get_type(), SymbolType::File);
+        assert_eq!(a.get_type(), ElfSymbolType::File);
         a.info = 0x05;
-        assert_eq!(a.get_type(), SymbolType::Common);
+        assert_eq!(a.get_type(), ElfSymbolType::Common);
         a.info = 0x06;
-        assert_eq!(a.get_type(), SymbolType::Tls);
+        assert_eq!(a.get_type(), ElfSymbolType::Tls);
         a.info = 0x07;
-        assert_eq!(a.get_type(), SymbolType::Num);
+        assert_eq!(a.get_type(), ElfSymbolType::Num);
         a.info = 0xfa;
-        assert_eq!(a.get_type(), SymbolType::GnuIfunc);
+        assert_eq!(a.get_type(), ElfSymbolType::GnuIfunc);
         assert_eq!(a.get_bind(), SymbolBind::Hiproc);
         a.info = 0xdc;
-        assert_eq!(a.get_type(), SymbolType::Hios);
+        assert_eq!(a.get_type(), ElfSymbolType::Hios);
         assert_eq!(a.get_bind(), SymbolBind::Loproc);
         a.info = 0xcd;
-        assert_eq!(a.get_type(), SymbolType::Loproc);
+        assert_eq!(a.get_type(), ElfSymbolType::Loproc);
         assert_eq!(a.get_bind(), SymbolBind::Hios);
         a.info = 0xaf;
-        assert_eq!(a.get_type(), SymbolType::Hiproc);
+        assert_eq!(a.get_type(), ElfSymbolType::Hiproc);
         assert_eq!(a.get_bind(), SymbolBind::GnuUnique);
 
         a.info = 0x98;
-        assert_eq!(a.get_type(), SymbolType::Unknown(8));
+        assert_eq!(a.get_type(), ElfSymbolType::Unknown(8));
         assert_eq!(a.get_bind(), SymbolBind::Unknown(9));
     }
 }
