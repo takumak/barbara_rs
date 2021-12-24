@@ -21,6 +21,7 @@ members = [
     "helpers/xtask",
     "libs/bitfield",
     "libs/elf_parser",
+    "libs/huffman",
     "libs/kallsyms",
     "libs/kmp_search",
     "libs/linked_list_allocator",
