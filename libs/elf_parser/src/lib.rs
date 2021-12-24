@@ -4,7 +4,13 @@ use stpack::Unpacker;
 mod err;
 mod raw;
 mod symtab;
-pub mod symbol;
+mod symbol;
+
+pub use symbol::{
+    ElfSymbol,
+    ElfSymbolBind,
+    ElfSymbolType,
+};
 
 use err::ElfParserError;
 use raw::{
@@ -19,8 +25,6 @@ use raw::{
     }
 };
 use symtab::ElfSymtabIterator;
-
-pub use symbol::ElfSymbolType;
 
 #[derive(PartialEq, Debug)]
 struct ElfSection<'a> {
@@ -117,7 +121,7 @@ mod tests {
     use crate::{
         ElfParser,
         ElfSection,
-        symbol::ElfSymbol,
+        ElfSymbol,
         raw::ident::{
             ElfClass,
             ElfEndian,

@@ -76,7 +76,7 @@ impl<'a> ElfSymbol<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::symbol::{
+    use crate::{
         ElfSymbolType,
         ElfSymbolBind,
         ElfSymbol,

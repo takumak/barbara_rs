@@ -4,7 +4,11 @@ use posix::Errno;
 extern crate stpack;
 use stpack::{unpacker, Unpacker};
 
-use crate::ElfSection;
+use crate::{
+    ElfSection,
+    ElfSymbol,
+};
+
 use crate::err::ElfParserError;
 use crate::raw::{
     ident::{
@@ -13,7 +17,6 @@ use crate::raw::{
     },
     section_header::ElfSectionHeaderType,
 };
-use crate::symbol::ElfSymbol;
 
 unpacker! {
     pub struct Elf32SymtabEntry {
@@ -165,6 +168,7 @@ impl<'a> Iterator for ElfSymtabIterator<'a> {
 mod tests {
     use crate::{
         ElfSection,
+        ElfSymbol,
         raw::ident::{
             ElfClass,
             ElfEndian,
@@ -175,7 +179,6 @@ mod tests {
             Elf32SymtabEntry,
             Elf64SymtabEntry,
         },
-        symbol::ElfSymbol,
         stpack::Unpacker,
     };
 
