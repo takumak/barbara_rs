@@ -22,11 +22,12 @@ pub use raw::{
     section_header::ElfSectionHeaderType,
 };
 
+pub use symtab::ElfSymtabIterator;
+
 use raw::{
     header::ElfHeader,
     section_header::ElfSectionHeader,
 };
-use symtab::ElfSymtabIterator;
 
 #[derive(PartialEq, Debug)]
 struct ElfSection<'a> {

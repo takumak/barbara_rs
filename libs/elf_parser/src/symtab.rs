@@ -167,8 +167,8 @@ mod tests {
         ElfSection,
         ElfSectionHeaderType,
         ElfSymbol,
+        ElfSymtabIterator,
         symtab::{
-            ElfSymtabIterator,
             Elf32SymtabEntry,
             Elf64SymtabEntry,
         },
