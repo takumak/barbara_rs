@@ -6,13 +6,14 @@ mod raw;
 mod symtab;
 mod symbol;
 
+pub use err::ElfParserError;
+
 pub use symbol::{
     ElfSymbol,
     ElfSymbolBind,
     ElfSymbolType,
 };
 
-use err::ElfParserError;
 use raw::{
     ident::{
         ElfClass,

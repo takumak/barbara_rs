@@ -1,7 +1,7 @@
 extern crate posix;
 use posix::Errno;
 
-use crate::err::ElfParserError;
+use crate::ElfParserError;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ElfClass {

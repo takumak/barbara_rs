@@ -4,7 +4,7 @@ use posix::Errno;
 extern crate stpack;
 use stpack::Unpacker;
 
-use crate::err::ElfParserError;
+use crate::ElfParserError;
 use crate::raw::{
     ident::{
         ElfEndian,

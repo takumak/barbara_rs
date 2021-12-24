@@ -5,11 +5,11 @@ extern crate stpack;
 use stpack::{unpacker, Unpacker};
 
 use crate::{
+    ElfParserError,
     ElfSection,
     ElfSymbol,
 };
 
-use crate::err::ElfParserError;
 use crate::raw::{
     ident::{
         ElfClass,
