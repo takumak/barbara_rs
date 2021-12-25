@@ -1,3 +1,8 @@
+#![cfg_attr(not(test), no_std)]
+
+// #![feature(trace_macros)]
+// trace_macros!(true);
+
 pub trait Stpack: Sized {
     const SIZE: usize;
     fn unpack(data: &[u8], le: bool) -> Result<Self, ()> {
