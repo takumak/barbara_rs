@@ -264,6 +264,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "elf_parser",
+ "kallsyms",
  "kmp_search",
  "rustc-demangle",
 ]
