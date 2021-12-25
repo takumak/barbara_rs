@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 bitfield = { path = "libs/bitfield" }
-kallsyms = { path = "libs/kallsyms" }
+kallsyms = { path = "libs/kallsyms", features = ["no_std"] }
 linked_list_allocator = { path = "libs/linked_list_allocator" }
 mmio = { path = "libs/mmio" }
 
