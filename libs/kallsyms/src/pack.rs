@@ -78,11 +78,11 @@ pub fn pack(symbols: &Vec<(String, u32)>) -> Vec<u8> {
     let mut token_table: Vec<u8> = str_table(&dic);
 
     // compose header
-    let count = symbols.len() as u32;
-    let addr_table_off = Header::SIZE as u32;
+    let count = symbols.len() as u16;
+    let addr_table_off = Header::SIZE as u16;
     let name_table_off = addr_table_off +
-        (core::mem::size_of::<AddrTblEntry>() as u32 * count);
-    let token_table_off = name_table_off + name_table.len() as u32;
+        (core::mem::size_of::<AddrTblEntry>() as u16 * count);
+    let token_table_off = name_table_off + name_table.len() as u16;
 
     let header = Header {
         reserved: 0,

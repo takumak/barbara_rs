@@ -32,7 +32,7 @@ impl KAllSyms {
         unsafe { *entry }
     }
 
-    fn get_u8_array(&self, table_off: u32, i: usize) -> &'static [u8] {
+    fn get_u8_array(&self, table_off: u16, i: usize) -> &'static [u8] {
         use core::mem;
         let addr_table = self.base + table_off as usize;
         let addr_off = addr_table + ((mem::size_of::<StrTblOff>()) * i);

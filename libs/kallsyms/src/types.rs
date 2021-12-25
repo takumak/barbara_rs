@@ -4,10 +4,10 @@ use stpack::{stpack, Stpack};
 stpack! {
     pub struct Header {
         pub reserved: u32,
-        pub count: u32,
-        pub addr_table_off: u32,
-        pub name_table_off: u32,
-        pub token_table_off: u32,
+        pub count: u16,
+        pub addr_table_off: u16,
+        pub name_table_off: u16,
+        pub token_table_off: u16,
     }
 }
 
