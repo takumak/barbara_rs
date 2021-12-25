@@ -161,14 +161,14 @@ mod tests {
     }
 
     #[test]
-    fn foo_size() {
+    fn test_size() {
         assert_eq!(Foo::SIZE, 7);
     }
 
     #[test]
     fn foo_le() {
         let data: Vec<u8> = (0..7).collect();
-        let foo = Foo::unpack_le(&data).unwrap();
+        let foo = Foo::unpack(&data, true).unwrap();
         assert_eq!(
             foo,
             Foo {
@@ -179,16 +179,16 @@ mod tests {
         );
 
         let mut buf: [u8; 7] = [0; 7];
-        foo.pack_le(&mut buf).unwrap();
+        foo.pack(&mut buf, true).unwrap();
         assert_eq!(buf.to_vec(), data);
-        foo.pack_be(&mut buf).unwrap();
+        foo.pack(&mut buf, false).unwrap();
         assert_ne!(buf.to_vec(), data);
     }
 
     #[test]
     fn foo_be() {
         let data: Vec<u8> = (0..7).collect();
-        let foo = Foo::unpack_be(&data).unwrap();
+        let foo = Foo::unpack(&data, false).unwrap();
         assert_eq!(
             foo,
             Foo {
@@ -199,19 +199,18 @@ mod tests {
         );
 
         let mut buf: [u8; 7] = [0; 7];
-        foo.pack_be(&mut buf).unwrap();
+        foo.pack(&mut buf, false).unwrap();
         assert_eq!(buf.to_vec(), data);
-        foo.pack_le(&mut buf).unwrap();
+        foo.pack(&mut buf, true).unwrap();
         assert_ne!(buf.to_vec(), data);
     }
 
     #[test]
     fn size_too_small() {
-        let data: Vec<u8> = (0..6).collect();
-        assert_eq!(
-            Foo::unpack_le(&data),
-            Err(())
-        );
+        let mut data: [u8; 6] = [0; 6];
+        let foo = Foo { foo: 0, bar: 0, baz: 0 };
+        assert_eq!(Foo::unpack_le(&data), Err(()));
+        assert_eq!(foo.pack_le(&mut data), Err(()));
     }
 
     #[test]
