@@ -48,11 +48,6 @@ pub fn make_dic(syms: Vec<&[u8]>) -> Vec<(Vec<u8>, usize)> {
         update_chars(&mut chars, &syms);
     }
 
-    dic.sort_by(|a, b|
-                b.1.cmp(&a.1)
-                .then(b.0.len().cmp(&a.0.len())
-                      .then(a.0.cmp(&b.0))));
-
     dic.extend(
         chars
             .iter_by_freq()
@@ -82,10 +77,10 @@ mod tests {
                 // -> the best second token is (b"bar".to_vec(), 6)
                 (b"bar1".to_vec(), 1),
                 (b"bar2".to_vec(), 1),
-                (b"456".to_vec(), 1),
                 (b"foo".to_vec(), 1),
-                (b"23".to_vec(), 1),
                 (b"1".to_vec(), 1),
+                (b"23".to_vec(), 1),
+                (b"456".to_vec(), 1),
             ]
         );
     }
