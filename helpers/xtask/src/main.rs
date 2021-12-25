@@ -32,22 +32,6 @@ enum Commands {
     },
 }
 
-fn cargo_target(cmd: &str, args: &Vec<String>) {
-    let mut args_all = vec![cmd, "--target", "thumbv8m.main-none-eabi"];
-    args_all.extend(args.iter().map(|s| &**s));
-
-    let mut cargo = process::Command::new("cargo");
-    cargo
-        .args(args_all)
-        .env("RUSTFLAGS", "-C link-arg=-Tlink.x -C force-frame-pointers=y");
-
-    let status = cargo
-        .status()
-        .expect("failed to execute cargo process");
-
-    assert!(status.success(), "failed to execute: {:?}", cargo);
-}
-
 #[derive(serde::Deserialize, Debug)]
 struct CompilerMessage {
     reason: String,
@@ -58,6 +42,65 @@ struct CompilerMessage {
 #[derive(serde::Deserialize, Debug)]
 struct Target {
     name: String,
+}
+
+fn build_linker_wrapper() -> String {
+    let args = vec![
+        "build",
+        "-q",
+        "--package", "kallsyms_tools",
+        "--bin", "link",
+        "--message-format=json",
+    ];
+
+    let mut cargo = process::Command::new("cargo");
+    let mut child = cargo
+        .args(args)
+        .stdout(process::Stdio::piped())
+        .spawn()
+        .expect("failed to spawn cargo command");
+
+    let reader = child.stdout.take().unwrap();
+    let deserializer = serde_json::Deserializer::from_reader(reader);
+
+    let mut program: Option<String> = None;
+    for msg in deserializer.into_iter::<CompilerMessage>() {
+        let msg = msg.unwrap();
+        if msg.reason == "compiler-artifact" && msg.executable.is_some() {
+            program = Some(msg.executable.unwrap());
+        }
+    }
+
+    let status = child
+        .wait()
+        .expect("wait failed");
+
+    assert!(status.success(), "failed to execute: {:?}", cargo);
+
+    program.unwrap()
+}
+
+fn cargo_target(cmd: &str, args: &Vec<String>) {
+    let linker = build_linker_wrapper();
+
+    let mut args_all = vec![cmd, "--target", "thumbv8m.main-none-eabi"];
+    args_all.extend(args.iter().map(|s| &**s));
+
+    let mut rustflags = format!("-C linker={}", linker);
+    rustflags += " -C linker-flavor=ld.lld"; // use LLVM lld with "-flavor gnu" flag
+    rustflags += " -C link-arg=-Tlink.x";
+    rustflags += " -C force-frame-pointers=y";
+
+    let mut cargo = process::Command::new("cargo");
+    cargo
+        .args(args_all)
+        .env("RUSTFLAGS", rustflags);
+
+    let status = cargo
+        .status()
+        .expect("failed to execute cargo process");
+
+    assert!(status.success(), "failed to execute: {:?}", cargo);
 }
 
 #[derive(serde::Deserialize, Debug)]

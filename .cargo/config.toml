@@ -3,4 +3,3 @@ xtask = "run --package xtask --"
 
 [target.thumbv8m.main-none-eabi]
 runner = "qemu-system-arm -M mps2-an505 -semihosting -serial stdio -display none -kernel"
-linker = "scripts/linker.py"
