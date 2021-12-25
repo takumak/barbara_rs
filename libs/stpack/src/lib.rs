@@ -9,15 +9,16 @@ pub trait Stpack: Sized {
     }
     fn unpack_le(data: &[u8]) -> Result<Self, ()>;
     fn unpack_be(data: &[u8]) -> Result<Self, ()>;
-    fn pack(&self, le: bool) -> Vec<u8> {
+
+    fn pack(&self, buf: &mut [u8], le: bool) -> Result<(), ()> {
         if le {
-            self.pack_le()
+            self.pack_le(buf)
         } else {
-            self.pack_be()
+            self.pack_be(buf)
         }
     }
-    fn pack_le(&self) -> Vec<u8>;
-    fn pack_be(&self) -> Vec<u8>;
+    fn pack_le(&self, buf: &mut [u8]) -> Result<(), ()>;
+    fn pack_be(&self, buf: &mut [u8]) -> Result<(), ()>;
 }
 
 #[macro_export]
@@ -67,32 +68,42 @@ macro_rules! stpack {
 
     // pack
 
-    {@pack $self:ident $name:ident $to_bytes:ident $out:ident
+    {@pack $self:ident $name:ident $to_bytes:ident $buf:ident
      { $($result:tt)* }
+     { $($p:tt)* }
      { }} =>
     {
-        fn $name(&$self) -> Vec<u8> {
-            let mut $out: Vec<u8> = Vec::new();
-            $($result)*
-            $out
+        fn $name(&$self, $buf: &mut [u8]) -> Result<(), ()> {
+            if $buf.len() < Self::SIZE {
+                Err(())
+            } else {
+                {$($result)*}
+                Ok(())
+            }
         }
     };
 
-    {@pack $self:ident $name:ident $to_bytes:ident $out:ident
+    {@pack $self:ident $name:ident $to_bytes:ident $buf:ident
      { $($result:tt)* }
+     { $($p:tt)* }
      { $vis:vis $fname:ident : $ftyp:ty }} =>
     {
-        stpack!{@pack $self $name $to_bytes $out { $($result)* } { $vis $fname : $ftyp, }}
+        stpack!{@pack $self $name $to_bytes $buf { $($result)* } { $($p)* } { $vis $fname : $ftyp, }}
     };
 
-    {@pack $self:ident $name:ident $to_bytes:ident $out:ident
+    {@pack $self:ident $name:ident $to_bytes:ident $buf:ident
      { $($result:tt)* }
+     { $($p:tt)* }
      { $vis:vis $fname:ident : $ftyp:ty, $($body:tt)* }} =>
     {
         stpack!{
-            @pack $self $name $to_bytes $out
-            {$($result)*
-             $out.extend_from_slice(&$self.$fname.$to_bytes());}
+            @pack $self $name $to_bytes $buf
+            { $($result)*
+              <&mut [u8; core::mem::size_of::<$ftyp>()]>::try_from(
+                  &mut $buf[(stpack!{@allsize $($p)*})..
+                            (stpack!{@allsize $($p)*}+(core::mem::size_of::<$ftyp>()))])
+              .unwrap().copy_from_slice(&$self.$fname.$to_bytes()); }
+            { $($p)* $vis $fname : $ftyp,  }
             { $($body)* }}
     };
 
@@ -117,8 +128,8 @@ macro_rules! stpack {
             const SIZE: usize = stpack!{@allsize $($body)*};
             stpack!{@unpack self unpack_le from_le_bytes buf { } { } { $($body)* }}
             stpack!{@unpack self unpack_be from_be_bytes buf { } { } { $($body)* }}
-            stpack!{@pack self pack_le to_le_bytes buf { } { $($body)* }}
-            stpack!{@pack self pack_be to_be_bytes buf { } { $($body)* }}
+            stpack!{@pack self pack_le to_le_bytes buf { } { } { $($body)* }}
+            stpack!{@pack self pack_be to_be_bytes buf { } { } { $($body)* }}
         }
     };
 
@@ -161,7 +172,12 @@ mod tests {
                 baz: 0x06050403,
             }
         );
-        assert_eq!(foo.pack(true), data);
+
+        let mut buf: [u8; 7] = [0; 7];
+        foo.pack_le(&mut buf).unwrap();
+        assert_eq!(buf.to_vec(), data);
+        foo.pack_be(&mut buf).unwrap();
+        assert_ne!(buf.to_vec(), data);
     }
 
     #[test]
@@ -176,7 +192,12 @@ mod tests {
                 baz: 0x03040506,
             }
         );
-        assert_eq!(foo.pack(false), data);
+
+        let mut buf: [u8; 7] = [0; 7];
+        foo.pack_be(&mut buf).unwrap();
+        assert_eq!(buf.to_vec(), data);
+        foo.pack_le(&mut buf).unwrap();
+        assert_ne!(buf.to_vec(), data);
     }
 
     #[test]
