@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 kmp_search = { path = "../kmp_search" }
+stpack = { path = "../stpack" }

@@ -255,6 +255,7 @@ name = "kallsyms"
 version = "0.1.0"
 dependencies = [
  "kmp_search",
+ "stpack",
 ]
 
 [[package]]

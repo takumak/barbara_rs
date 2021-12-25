@@ -1,4 +1,6 @@
 mod compress;
+mod types;
+mod pack;
 
 pub struct KAllSyms {
     base: usize,
