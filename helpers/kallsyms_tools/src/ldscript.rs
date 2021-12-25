@@ -1,6 +1,6 @@
 use std::io;
 
-pub fn ldscript<T>(filename: String, writer: &mut T)
+pub fn ldscript<T>(filename: &String, writer: &mut T)
 where T: io::Write
 {
     use crate::symbol::symbols_from_file;
