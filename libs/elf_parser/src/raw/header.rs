@@ -1,5 +1,5 @@
 extern crate stpack;
-use stpack::stpack;
+use stpack::{stpack, Stpack};
 
 use crate::bits_struct;
 
@@ -38,7 +38,7 @@ mod tests {
     #[test]
     fn elf32header() {
         let data: Vec<u8> = (0u8..0xffu8).collect();
-        let (header32, _) = Elf32Header::unpack(&data, false).unwrap();
+        let header32 = Elf32Header::unpack(&data, false).unwrap();
         let header: &dyn ElfHeader = &header32;
 
         assert_eq!(header32.typ,                          0x0001u16);
@@ -73,7 +73,7 @@ mod tests {
     #[test]
     fn elf64header() {
         let data: Vec<u8> = (0u8..0xffu8).collect();
-        let (header64, _) = Elf64Header::unpack(&data, false).unwrap();
+        let header64 = Elf64Header::unpack(&data, false).unwrap();
         let header: &dyn ElfHeader = &header64;
 
         assert_eq!(header64.typ,                          0x0001u16);

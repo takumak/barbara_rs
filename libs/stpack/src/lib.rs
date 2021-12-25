@@ -1,6 +1,14 @@
 pub trait Stpack: Sized {
     const SIZE: usize;
-    fn unpack(data: &[u8], le: bool) -> Result<(Self, &[u8]), ()>;
+    fn unpack(data: &[u8], le: bool) -> Result<Self, ()> {
+        if le {
+            Self::unpack_le(data)
+        } else {
+            Self::unpack_be(data)
+        }
+    }
+    fn unpack_le(data: &[u8]) -> Result<Self, ()>;
+    fn unpack_be(data: &[u8]) -> Result<Self, ()>;
     fn pack(&self, le: bool) -> Vec<u8> {
         if le {
             self.pack_le()
@@ -14,50 +22,50 @@ pub trait Stpack: Sized {
 
 #[macro_export]
 macro_rules! stpack {
-    {@constructor_from <le> $ftyp:ty} => {
-        <$ftyp>::from_le_bytes
-    };
+    // unpack
 
-    {@constructor_from <be> $ftyp:ty} => {
-        <$ftyp>::from_be_bytes
-    };
-
-    {@constructor_one <$lebe:ident> $data:ident, $ftyp:ty { $($p:tt)* }} => {
-        stpack!{@constructor_from <$lebe> $ftyp}
-        (<[u8; core::mem::size_of::<$ftyp>()]>::try_from(
-            &$data[(stpack!{@allsize $($p)*})..
-                   (stpack!{@allsize $($p)*}+(core::mem::size_of::<$ftyp>()))]
-        ).unwrap())
-    };
-
-    {@constructor <$lebe:ident> $data:ident
-     { $($result:tt)* },
-     { $($p:tt)* },
+    {@unpack $self:ident $name:ident $from_bytes:ident $buf:ident
+     { $($result:tt)* }
+     { $($p:tt)* }
      { }} =>
     {
-        Self { $($result)* }
+        fn $name($buf: &[u8]) -> Result<Self, ()> {
+            if $buf.len() < Self::SIZE {
+                Err(())
+            } else {
+                Ok(Self {
+                    $($result)*
+                })
+            }
+        }
     };
 
-    {@constructor <$lebe:ident> $data:ident
-     { $($result:tt)* },
-     { $($p:tt)* },
+    {@unpack $self:ident $name:ident $from_bytes:ident $buf:ident
+     { $($result:tt)* }
+     { $($p:tt)* }
      { $vis:vis $fname:ident : $ftyp:ty }} =>
     {
-        stpack!{@constructor <$lebe> $data {$($result)*}, {$($p)*}, {$vis $fname : $ftyp,}}
+        stpack!{@unpack $self $name $from_bytes $buf { $($result)* } { $($p)* } { $vis $fname : $ftyp, }}
     };
 
-    {@constructor <$lebe:ident> $data:ident
-     { $($result:tt)* },
-     { $($p:tt)* },
+    {@unpack $self:ident $name:ident $from_bytes:ident $buf:ident
+     { $($result:tt)* }
+     { $($p:tt)* }
      { $vis:vis $fname:ident : $ftyp:ty, $($body:tt)* }} =>
     {
         stpack!{
-            @constructor <$lebe> $data
-            {$($result)*
-             $fname: stpack!{@constructor_one <$lebe> $data, $ftyp { $($p)* }},},
-            {$($p)* $vis $fname : $ftyp, },
+            @unpack $self $name $from_bytes $buf
+            { $($result)*
+              $fname: <$ftyp>::$from_bytes(
+                  <[u8; core::mem::size_of::<$ftyp>()]>::try_from(
+                      &$buf[(stpack!{@allsize $($p)*})..
+                            (stpack!{@allsize $($p)*}+(core::mem::size_of::<$ftyp>()))])
+                      .unwrap()), }
+            { $($p)* $vis $fname : $ftyp,  }
             { $($body)* }}
     };
+
+    // pack
 
     {@pack $self:ident $name:ident $to_bytes:ident $out:ident
      { $($result:tt)* }
@@ -88,6 +96,8 @@ macro_rules! stpack {
             { $($body)* }}
     };
 
+    // size calculator
+
     {@allsize} => {
         0
     };
@@ -100,30 +110,19 @@ macro_rules! stpack {
         core::mem::size_of::<$ftyp>() + stpack!{@allsize $($body)*}
     };
 
+    // impl
+
     {@impl $stname:ident { $($body:tt)* }} => {
-        impl $crate::Stpack for $stname {
+        impl Stpack for $stname {
             const SIZE: usize = stpack!{@allsize $($body)*};
-
-            fn unpack(data: &[u8], le: bool) -> Result<(Self, &[u8]), ()> {
-                if data.len() < Self::SIZE {
-                    Err(())
-                } else {
-                    let (data, right) = data.split_at(Self::SIZE);
-                    let r =
-                        if le {
-                            stpack!{@constructor <le> data { }, { }, { $($body)* }}
-                        } else {
-                            stpack!{@constructor <be> data { }, { }, { $($body)* }}
-                        };
-
-                    Ok((r, right))
-                }
-            }
-
-            stpack!{@pack self pack_le to_le_bytes result { } { $($body)* }}
-            stpack!{@pack self pack_be to_be_bytes result { } { $($body)* }}
+            stpack!{@unpack self unpack_le from_le_bytes buf { } { } { $($body)* }}
+            stpack!{@unpack self unpack_be from_be_bytes buf { } { } { $($body)* }}
+            stpack!{@pack self pack_le to_le_bytes buf { } { $($body)* }}
+            stpack!{@pack self pack_be to_be_bytes buf { } { $($body)* }}
         }
     };
+
+    // entrypoint
 
     {$(#[$attr:meta])* $vis:vis struct $stname:ident { $($body:tt)* }} => {
         $(#[$attr])*
@@ -153,60 +152,38 @@ mod tests {
     #[test]
     fn foo_le() {
         let data: Vec<u8> = (0..7).collect();
-        let foo = Foo::unpack(&data, true);
+        let foo = Foo::unpack_le(&data).unwrap();
         assert_eq!(
             foo,
-            Ok((
-                Foo {
-                    foo: 0x00,
-                    bar: 0x0201,
-                    baz: 0x06050403,
-                },
-                &[] as &[u8]
-            ))
+            Foo {
+                foo: 0x00,
+                bar: 0x0201,
+                baz: 0x06050403,
+            }
         );
-        assert_eq!(foo.unwrap().0.pack(true), data);
+        assert_eq!(foo.pack(true), data);
     }
 
     #[test]
-    fn test_be() {
+    fn foo_be() {
         let data: Vec<u8> = (0..7).collect();
-        let foo = Foo::unpack(&data, false);
+        let foo = Foo::unpack_be(&data).unwrap();
         assert_eq!(
             foo,
-            Ok((
-                Foo {
-                    foo: 0x00,
-                    bar: 0x0102,
-                    baz: 0x03040506,
-                },
-                &[] as &[u8]
-            ))
+            Foo {
+                foo: 0x00,
+                bar: 0x0102,
+                baz: 0x03040506,
+            }
         );
-        assert_eq!(foo.unwrap().0.pack(false), data);
+        assert_eq!(foo.pack(false), data);
     }
 
     #[test]
-    fn test_remain_data() {
-        let data: Vec<u8> = (0..10).collect();
-        assert_eq!(
-            Foo::unpack(&data, false),
-            Ok((
-                Foo {
-                    foo: 0x00,
-                    bar: 0x0102,
-                    baz: 0x03040506,
-                },
-                &[7u8, 8u8, 9u8] as &[u8]
-            ))
-        );
-    }
-
-    #[test]
-    fn test_size_too_small() {
+    fn size_too_small() {
         let data: Vec<u8> = (0..6).collect();
         assert_eq!(
-            Foo::unpack(&data, false),
+            Foo::unpack_le(&data),
             Err(())
         );
     }
@@ -214,7 +191,7 @@ mod tests {
     #[test]
     fn test_debug() {
         let data: Vec<u8> = (0..7).collect();
-        let (foo, _) = Foo::unpack(&data, false).unwrap();
+        let foo = Foo::unpack_be(&data).unwrap();
         assert_eq!(format!("{:?}", foo), "Foo { foo: 0, bar: 258, baz: 50595078 }");
     }
 }

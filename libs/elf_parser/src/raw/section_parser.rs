@@ -33,7 +33,7 @@ where H: Stpack + ElfHeader,
         Result<Self, ElfParserError>
     {
         let le = endian == ElfEndian::ElfLE;
-        let (header, _) = H::unpack(&data[ELF_IDENT_SIZE..], le)
+        let header = H::unpack(&data[ELF_IDENT_SIZE..], le)
             .or(Err(ElfParserError::new(
                 Errno::EINVAL, format!("Failed to parse ELF header"))))?;
 
@@ -64,7 +64,7 @@ where H: Stpack + ElfHeader,
                          section={:#x}--{:#x}, filesize={:#x}",
                         off, off + size, data.len())))
         }
-        let (sh, _) = SH::unpack(&data[off..(off+size)], self.le)
+        let sh = SH::unpack(&data[off..(off+size)], self.le)
             .or(Err(ElfParserError::new(
                 Errno::EINVAL,
                 format!("Failed to parse elf section header: {}", idx))))?;

@@ -100,7 +100,7 @@ impl<'a> Iterator for ElfSymtabIterator<'a> {
         let (nameoff, value, size, info, other, shndx) = match self.class {
             ElfClass::Elf32 =>
                 match Elf32SymtabEntry::unpack(data, self.le) {
-                    Ok((ent, _)) => (
+                    Ok(ent) => (
                         ent.name as usize,
                         ent.value as u64,
                         ent.size as u64,
@@ -113,7 +113,7 @@ impl<'a> Iterator for ElfSymtabIterator<'a> {
                 },
             ElfClass::Elf64 =>
                 match Elf64SymtabEntry::unpack(data, self.le) {
-                    Ok((ent, _)) => (
+                    Ok(ent) => (
                         ent.name as usize,
                         ent.value,
                         ent.size,
