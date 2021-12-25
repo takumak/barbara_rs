@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand};
 extern crate kallsyms;
 
 use kallsyms_tools::symbol::symbols_from_file;
+use kallsyms_tools::ldscript::ldscript;
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -20,6 +21,11 @@ enum Commands {
     },
 
     Pack {
+        #[clap(value_name = "FILENAME")]
+        filename: String,
+    },
+
+    Ldscript {
         #[clap(value_name = "FILENAME")]
         filename: String,
     },
@@ -54,6 +60,10 @@ fn main() {
                 .unwrap();
             eprintln!("compression ratio: {:.2}",
                       data.len() as f64 / plain_len as f64);
+        }
+
+        Some(Commands::Ldscript { filename }) => {
+            ldscript(filename.into(), &mut std::io::stdout());
         }
 
         None => {}
