@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 
 extern crate kallsyms;
 
-mod symbol;
+use kallsyms_tools::symbol::symbols_from_file;
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -30,7 +30,6 @@ fn main() {
 
     match &cli.command {
         Some(Commands::ListSymbols { filename }) => {
-            use symbol::symbols_from_file;
             for sym in symbols_from_file(filename) {
                 println!("{:08x} {}", sym.addr, sym.name);
             }
@@ -38,7 +37,6 @@ fn main() {
 
         Some(Commands::Pack { filename }) => {
             use std::io::Write;
-            use symbol::symbols_from_file;
 
             let symbols: Vec<(String, u32)> =
                 symbols_from_file(filename)
