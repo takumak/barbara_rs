@@ -3,6 +3,10 @@ name = "kallsyms"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+no_std = []
+
 [dependencies]
 kmp_search = { path = "../kmp_search" }
 stpack = { path = "../stpack" }
