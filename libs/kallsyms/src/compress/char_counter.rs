@@ -21,22 +21,6 @@ impl CharCounter {
         }
     }
 
-    pub fn most_one(&self) -> Option<(u8, usize)> {
-        let mut max = 0;
-        let mut max_i = 0;
-        for i in 0..self.table.len() {
-            if self.table[i] > max {
-                max = self.table[i];
-                max_i = i;
-            }
-        }
-        if max > 0 {
-            Some((max_i as u8, max))
-        } else {
-            None
-        }
-    }
-
     pub fn iter_by_freq(&self) -> impl Iterator<Item = (u8, usize)> {
         let mut chr_cnt: Vec<(u8, usize)> =
             self.table.iter().enumerate().map(|(c, s)| (c as u8, *s)).collect();
@@ -67,8 +51,6 @@ mod tests {
               mollit anim id est laborum.".iter()
         );
 
-        assert_eq!(counter.most_one(), Some((b' ', 68usize)));
-
         let freq_chars: Vec<(u8, usize)> =
             counter.iter_by_freq().collect();
 
@@ -89,8 +71,6 @@ mod tests {
     #[test]
     fn test_empty() {
         let counter = CharCounter::new();
-
-        assert_eq!(counter.most_one(), None);
 
         let freq_chars: Vec<(u8, usize)> =
             counter.iter_by_freq().collect();
