@@ -8,6 +8,7 @@ use elf_parser::{
 extern crate rustc_demangle;
 use rustc_demangle::demangle;
 
+#[derive(PartialEq)]
 pub struct Symbol {
     pub addr: u32,
     pub name: String,
