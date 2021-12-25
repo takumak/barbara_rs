@@ -1,25 +1,24 @@
+extern crate kmp_search;
+use kmp_search::kmp_search_all;
+
 use crate::compress::guess_best_token::guess_best_token;
 
 fn split_by_token<'a>(sym: &'a [u8], token: &[u8]) -> Vec<&'a [u8]> {
-    if sym.len() == 0 {
-        return vec![];
-    } else if token.len() > sym.len() {
-        return vec![sym];
+    let found = kmp_search_all(token, sym);
+
+    let mut result: Vec<&[u8]> = Vec::new();
+    let mut last_end = 0;
+    for start in found {
+        if start > last_end {
+            result.push(&sym[last_end..start]);
+        }
+        last_end = start + token.len();
     }
-    // todo: performance improvement needed
-    match sym.windows(token.len()).position(|w| w == token) {
-        Some(pos) => {
-            let mut r =
-                if pos == 0 {
-                    vec![]
-                } else {
-                    vec![&sym[..pos]]
-                };
-            r.append(&mut split_by_token(&sym[(pos + token.len())..], token));
-            r
-        },
-        None => vec![sym],
+
+    if last_end < sym.len() {
+        result.push(&sym[last_end..]);
     }
+    result
 }
 
 pub fn make_dic(syms: Vec<&[u8]>) -> Vec<(Vec<u8>, usize)> {
