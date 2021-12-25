@@ -158,4 +158,23 @@ mod tests {
 
         assert_eq!(kallsyms.safe_search(0x1000, &mut namebuf), None);
     }
+
+    #[test]
+    fn huge_data() {
+        let mut syms: Vec<(String, u32)> = vec![];
+        for i in 0u32..0xff {
+            syms.push((format!("{:02x}|{:02x}", i, i + 1), i << 16));
+        }
+
+        let data = pack(&syms);
+        let kallsyms = crate::KAllSyms::new(data.as_ptr() as usize);
+
+        for i in 0u32..0xff {
+            let mut buf: [u8; 10] = [0; 10];
+
+            assert_eq!(kallsyms.nth_addr(i as usize), i << 16);
+            assert_eq!(kallsyms.safe_nth_name(i as usize, &mut buf),
+                       &format!("{:02x}|{:02x}", i, i + 1));
+        }
+    }
 }
