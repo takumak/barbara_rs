@@ -106,6 +106,7 @@ impl KAllSyms {
                 let name = self.safe_nth_name(idx, buf);
                 let off = addr - self.nth_addr(idx);
                 Some((name, off))
+
             }
         }
     }
@@ -115,10 +116,10 @@ impl KAllSyms {
 mod tests {
     use stpack::Stpack;
 
-    use crate::{
-        pack,
-        types::Header,
-    };
+    extern crate kallsyms_enc;
+    use kallsyms_enc::pack;
+
+    use crate::Header;
 
     #[test]
     fn normal1() {

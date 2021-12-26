@@ -1,0 +1,10 @@
+[package]
+name = "kallsyms_dec"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+stpack = { path = "../stpack" }
+
+[dev-dependencies]
+kallsyms_enc = { path = "../kallsyms_enc" }

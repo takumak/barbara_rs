@@ -4,7 +4,8 @@ use stpack::Stpack;
 extern crate kmp_search;
 use kmp_search::kmp_search_all;
 
-use crate::types::{
+extern crate kallsyms_dec;
+use kallsyms_dec::{
     Header,
     AddrTblEntry,
     StrTblOff,

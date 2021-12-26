@@ -1,12 +1,9 @@
 [package]
-name = "kallsyms"
+name = "kallsyms_enc"
 version = "0.1.0"
 edition = "2021"
 
-[features]
-default = []
-no_std = []
-
 [dependencies]
+kallsyms_dec = { path = "../kallsyms_dec" }
 kmp_search = { path = "../kmp_search" }
 stpack = { path = "../stpack" }

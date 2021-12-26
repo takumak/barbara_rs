@@ -1,5 +1,7 @@
 use std::io;
 
+extern crate kallsyms_enc;
+
 pub fn ldscript<T>(filename: &String, writer: &mut T)
 where T: io::Write
 {
@@ -10,7 +12,7 @@ where T: io::Write
         .into_iter()
         .map(|s| (s.name, s.addr))
         .collect();
-    let data = kallsyms::pack(&symbols);
+    let data = kallsyms_enc::pack(&symbols);
 
     writer.write(b"SECTIONS {\n").unwrap();
     writer.write(b"    .kallsyms : {\n").unwrap();

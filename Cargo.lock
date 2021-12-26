@@ -36,7 +36,7 @@ name = "barbara"
 version = "0.1.0"
 dependencies = [
  "bitfield",
- "kallsyms",
+ "kallsyms_dec",
  "linked_list_allocator",
  "mmio",
 ]
@@ -251,9 +251,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 
 [[package]]
-name = "kallsyms"
+name = "kallsyms_dec"
 version = "0.1.0"
 dependencies = [
+ "kallsyms_enc",
+ "stpack",
+]
+
+[[package]]
+name = "kallsyms_enc"
+version = "0.1.0"
+dependencies = [
+ "kallsyms_dec",
  "kmp_search",
  "stpack",
 ]
@@ -264,7 +273,8 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "elf_parser",
- "kallsyms",
+ "kallsyms_dec",
+ "kallsyms_enc",
  "kmp_search",
  "rustc-demangle",
 ]

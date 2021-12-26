@@ -1,5 +1,3 @@
-extern crate kallsyms;
-
 use kallsyms_tools::{
     ldscript::ldscript,
     symbol::symbols_from_file,
