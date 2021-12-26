@@ -131,8 +131,7 @@ impl Vfs {
         for m in self.mount.iter_mut() {
             if path
                 .iter()
-                .take(m.mountpoint.len())
-                .map(|s| *s)
+                .take(m.mountpoint.len()).copied()
                 .eq(m.mountpoint.iter().map(|s| s.as_str()))
             {
                 mount = Some(m);
@@ -166,7 +165,7 @@ impl Vfs {
     fn open(&mut self, path: &str, mode: OpenMode) -> Result<FileDescriptor, FsError> {
         let (mount, mpath) = self.find_mount_by_path_mut(path);
 
-        let node_id = if mpath.len() == 0 {
+        let node_id = if mpath.is_empty() {
             NODE_ID_ROOT
         } else {
             let dirname = &mpath[..(mpath.len() - 1)];
@@ -266,7 +265,7 @@ impl Vfs {
     fn mkdir(&mut self, path: &str) -> Result<(), FsError> {
         let (mount, mpath) = self.find_mount_by_path_mut(path);
 
-        if mpath.len() == 0 {
+        if mpath.is_empty() {
             return Err(FsError::new(
                 posix::Errno::EEXIST,
                 format!("Directory exists: {}", path),

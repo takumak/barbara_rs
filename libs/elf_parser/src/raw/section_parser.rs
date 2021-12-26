@@ -27,7 +27,7 @@ where
         let le = endian == ElfEndian::ElfLE;
         let header = H::unpack(&data[ELF_IDENT_SIZE..], le).or(Err(ElfParserError::new(
             Errno::EINVAL,
-            format!("Failed to parse ELF header"),
+            "Failed to parse ELF header".to_string(),
         )))?;
 
         Ok(Self {

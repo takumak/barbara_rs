@@ -42,7 +42,7 @@ pub fn make_dic(syms: Vec<&[u8]>) -> Vec<(Vec<u8>, usize)> {
 
         let mut newsyms: Vec<&[u8]> = vec![];
         for sym in syms.iter() {
-            newsyms.append(&mut split_by_token(sym, &token));
+            newsyms.append(&mut split_by_token(sym, token));
         }
         syms = newsyms;
         update_chars(&mut chars, &syms);

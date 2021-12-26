@@ -60,7 +60,7 @@ pub trait FileSystem {
                 None => return Ok(None),
             };
         }
-        return Ok(Some(file));
+        Ok(Some(file))
     }
 }
 

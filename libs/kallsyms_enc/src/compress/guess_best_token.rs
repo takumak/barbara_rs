@@ -30,7 +30,7 @@ fn enlarge<'a>(
                 &sym[1..]
             };
 
-            let positions = kmp_search_all(&token, subject);
+            let positions = kmp_search_all(token, subject);
             for i in positions {
                 let tok_l = i;
                 let tok_r = tok_l + token.len();
@@ -130,7 +130,7 @@ pub fn strictly_find_best_token<'a>(symbols: &'a [&'a [u8]]) -> (&'a [u8], usize
                 token
                     .len()
                     .cmp(&best_token.len())
-                    .then(token.cmp(&best_token).reverse()),
+                    .then(token.cmp(best_token).reverse()),
             );
             if cmp.is_gt() {
                 best_token = token;

@@ -36,7 +36,7 @@ impl KAllSyms {
     }
 
     fn nth_token(&self, i: u8) -> &'static [u8] {
-        return self.get_u8_array(self.header.token_table_off, i as usize);
+        self.get_u8_array(self.header.token_table_off, i as usize)
     }
 
     fn safe_nth_name<'a>(&self, i: usize, buf: &'a mut [u8]) -> &'a str {

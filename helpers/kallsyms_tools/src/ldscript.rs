@@ -8,7 +8,7 @@ where
 {
     use crate::symbol::symbols_from_file;
 
-    let symbols: Vec<(String, u32)> = symbols_from_file(&filename)
+    let symbols: Vec<(String, u32)> = symbols_from_file(filename)
         .into_iter()
         .map(|s| (s.name, s.addr))
         .collect();
