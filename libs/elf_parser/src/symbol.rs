@@ -43,44 +43,40 @@ pub struct ElfSymbol<'a> {
 impl<'a> ElfSymbol<'a> {
     pub fn get_type(&self) -> ElfSymbolType {
         match self.info & 0xf {
-            0  => ElfSymbolType::Notype,
-            1  => ElfSymbolType::Object,
-            2  => ElfSymbolType::Func,
-            3  => ElfSymbolType::Section,
-            4  => ElfSymbolType::File,
-            5  => ElfSymbolType::Common,
-            6  => ElfSymbolType::Tls,
-            7  => ElfSymbolType::Num,
+            0 => ElfSymbolType::Notype,
+            1 => ElfSymbolType::Object,
+            2 => ElfSymbolType::Func,
+            3 => ElfSymbolType::Section,
+            4 => ElfSymbolType::File,
+            5 => ElfSymbolType::Common,
+            6 => ElfSymbolType::Tls,
+            7 => ElfSymbolType::Num,
             10 => ElfSymbolType::GnuIfunc,
             12 => ElfSymbolType::Hios,
             13 => ElfSymbolType::Loproc,
             15 => ElfSymbolType::Hiproc,
-            t  => ElfSymbolType::Unknown(t),
+            t => ElfSymbolType::Unknown(t),
         }
     }
 
     pub fn get_bind(&self) -> ElfSymbolBind {
         match (self.info >> 4) & 0xf {
-            0  => ElfSymbolBind::Local,
-            1  => ElfSymbolBind::Global,
-            2  => ElfSymbolBind::Weak,
-            3  => ElfSymbolBind::Num,
+            0 => ElfSymbolBind::Local,
+            1 => ElfSymbolBind::Global,
+            2 => ElfSymbolBind::Weak,
+            3 => ElfSymbolBind::Num,
             10 => ElfSymbolBind::GnuUnique,
             12 => ElfSymbolBind::Hios,
             13 => ElfSymbolBind::Loproc,
             15 => ElfSymbolBind::Hiproc,
-            b  => ElfSymbolBind::Unknown(b),
+            b => ElfSymbolBind::Unknown(b),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        ElfSymbolType,
-        ElfSymbolBind,
-        ElfSymbol,
-    };
+    use crate::{ElfSymbol, ElfSymbolBind, ElfSymbolType};
 
     #[test]
     fn symboltype_partialeq() {

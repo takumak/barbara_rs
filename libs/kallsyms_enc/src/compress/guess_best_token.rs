@@ -11,7 +11,12 @@ fn calc_score(len: usize, count: usize) -> usize {
     }
 }
 
-fn enlarge<'a>(symbols: &'a [&'a [u8]], mut token: &'a [u8], count: usize, right: bool) -> (&'a [u8], usize) {
+fn enlarge<'a>(
+    symbols: &'a [&'a [u8]],
+    mut token: &'a [u8],
+    count: usize,
+    right: bool,
+) -> (&'a [u8], usize) {
     let mut new_scores: Vec<(&[u8], usize, usize)> =
         vec![(token, count, calc_score(token.len(), count))];
 
@@ -19,12 +24,11 @@ fn enlarge<'a>(symbols: &'a [&'a [u8]], mut token: &'a [u8], count: usize, right
         let mut tbl: [(&[u8], usize); 256] = [(&[], 0); 256];
 
         for sym in symbols {
-            let subject =
-                if right {
-                    &sym[..(sym.len() - 1)]
-                } else {
-                    &sym[1..]
-                };
+            let subject = if right {
+                &sym[..(sym.len() - 1)]
+            } else {
+                &sym[1..]
+            };
 
             let positions = kmp_search_all(&token, subject);
             for i in positions {
@@ -122,10 +126,12 @@ pub fn strictly_find_best_token<'a>(symbols: &'a [&'a [u8]]) -> (&'a [u8], usize
             let cnt = bot - top + 1;
 
             let score = token.len() * cnt;
-            let cmp = score
-                .cmp(&best_score)
-                .then(token.len().cmp(&best_token.len())
-                      .then(token.cmp(&best_token).reverse()));
+            let cmp = score.cmp(&best_score).then(
+                token
+                    .len()
+                    .cmp(&best_token.len())
+                    .then(token.cmp(&best_token).reverse()),
+            );
             if cmp.is_gt() {
                 best_token = token;
                 best_score = score;
@@ -138,10 +144,7 @@ pub fn strictly_find_best_token<'a>(symbols: &'a [&'a [u8]]) -> (&'a [u8], usize
 
 #[cfg(test)]
 mod tests {
-    use crate::compress::guess_best_token::{
-        guess_best_token,
-        strictly_find_best_token,
-    };
+    use crate::compress::guess_best_token::{guess_best_token, strictly_find_best_token};
 
     #[test]
     fn guess_1() {
@@ -153,37 +156,20 @@ mod tests {
             b"eee_test_common_token_555",
         ];
 
-        assert_eq!(
-            guess_best_token(data),
-            (&b"_test_common_token_"[..], 5)
-        )
+        assert_eq!(guess_best_token(data), (&b"_test_common_token_"[..], 5))
     }
 
     #[test]
     fn guess_local_optimum_1() {
-        let data: &[&[u8]] = &[
-            b"123abc",
-            b"456abc",
-            b"789abc",
-        ];
+        let data: &[&[u8]] = &[b"123abc", b"456abc", b"789abc"];
 
-        assert_eq!(
-            guess_best_token(data),
-            (&b"123abc"[..], 1)
-        )
+        assert_eq!(guess_best_token(data), (&b"123abc"[..], 1))
     }
 
     #[test]
     fn strict_1() {
-        let data: &[&[u8]] = &[
-            b"123abc",
-            b"456abc",
-            b"789abc",
-        ];
+        let data: &[&[u8]] = &[b"123abc", b"456abc", b"789abc"];
 
-        assert_eq!(
-            strictly_find_best_token(data),
-            (&b"abc"[..], 3)
-        )
+        assert_eq!(strictly_find_best_token(data), (&b"abc"[..], 3))
     }
 }

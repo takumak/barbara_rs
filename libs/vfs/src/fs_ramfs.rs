@@ -1,10 +1,4 @@
-use crate::fscore::{
-    DEntry,
-    FsError,
-    NodeId,
-    NODE_ID_ROOT,
-    NodeType,
-};
+use crate::fscore::{DEntry, FsError, NodeId, NodeType, NODE_ID_ROOT};
 
 use alloc::collections::btree_map::BTreeMap;
 use core::{
@@ -36,7 +30,7 @@ impl RamFs {
                 ntype: NodeType::Directory,
                 children: Vec::new(),
                 file_body: Vec::new(),
-            }
+            },
         );
         Self {
             fsnodes,
@@ -52,7 +46,8 @@ impl crate::FileSystem for RamFs {
         if dir_node.ntype != NodeType::Directory {
             return Err(FsError::new(
                 posix::Errno::EBADF,
-                format!("Attempt to readdir() for a file: id={}", dir_node.id)));
+                format!("Attempt to readdir() for a file: id={}", dir_node.id),
+            ));
         }
 
         if pos >= dir_node.children.len() {
@@ -75,7 +70,11 @@ impl crate::FileSystem for RamFs {
         if dir_node.ntype != NodeType::Directory {
             return Err(FsError::new(
                 posix::Errno::EBADF,
-                format!("Attempt to create child node for a file: id={}", dir_node.id)));
+                format!(
+                    "Attempt to create child node for a file: id={}",
+                    dir_node.id
+                ),
+            ));
         }
 
         let node_id = self.next_node_id;
@@ -101,14 +100,15 @@ impl crate::FileSystem for RamFs {
         if file_node.ntype != NodeType::RegularFile {
             return Err(FsError::new(
                 posix::Errno::EISDIR,
-                format!("Attempt to read() for a directory: id={}", file_node.id)));
+                format!("Attempt to read() for a directory: id={}", file_node.id),
+            ));
         }
 
         if off >= file_node.file_body.len() {
             Ok(0)
         } else {
             let read_size = min(off + data.len(), file_node.file_body.len()) - off;
-            data[..read_size].copy_from_slice(&file_node.file_body[off..(off+read_size)]);
+            data[..read_size].copy_from_slice(&file_node.file_body[off..(off + read_size)]);
             Ok(read_size)
         }
     }
@@ -119,16 +119,19 @@ impl crate::FileSystem for RamFs {
         if file_node.ntype != NodeType::RegularFile {
             return Err(FsError::new(
                 posix::Errno::EISDIR,
-                format!("Attempt to write() for a directory: id={}", file_node.id)));
+                format!("Attempt to write() for a directory: id={}", file_node.id),
+            ));
         }
 
         if off < file_node.file_body.len() {
             let overwrite_size = min(off + data.len(), file_node.file_body.len()) - off;
-            file_node.file_body[off..off+overwrite_size].copy_from_slice(&data[..overwrite_size]);
+            file_node.file_body[off..off + overwrite_size].copy_from_slice(&data[..overwrite_size]);
         }
 
         if off > file_node.file_body.len() {
-            file_node.file_body.extend(iter::repeat(0).take(off - file_node.file_body.len()));
+            file_node
+                .file_body
+                .extend(iter::repeat(0).take(off - file_node.file_body.len()));
         }
 
         if off + data.len() > file_node.file_body.len() {
@@ -145,7 +148,8 @@ impl crate::FileSystem for RamFs {
         if file_node.ntype != NodeType::RegularFile {
             return Err(FsError::new(
                 posix::Errno::EISDIR,
-                format!("Attempt to truncate() for a directory: id={}", file_node.id)));
+                format!("Attempt to truncate() for a directory: id={}", file_node.id),
+            ));
         }
 
         file_node.file_body.truncate(len);
@@ -158,52 +162,52 @@ impl crate::FileSystem for RamFs {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::{
-        DEntry,
-        FileSystem,
-        NodeType,
-        NODE_ID_ROOT,
-        RamFs,
-    };
+    use crate::{DEntry, FileSystem, NodeType, RamFs, NODE_ID_ROOT};
 
     #[test]
     fn create_on_regular_file() {
         let mut ramfs = RamFs::new();
 
-        let parent = ramfs.create(
-            NODE_ID_ROOT,
-            &DEntry {
-                name: String::from("foo"),
-                ntype: NodeType::RegularFile,
-            }
-        ).unwrap();
+        let parent = ramfs
+            .create(
+                NODE_ID_ROOT,
+                &DEntry {
+                    name: String::from("foo"),
+                    ntype: NodeType::RegularFile,
+                },
+            )
+            .unwrap();
 
-        ramfs.create(
-            parent,
-            &DEntry {
-                name: String::from("bar"),
-                ntype: NodeType::RegularFile,
-            }
-        ).expect_err("create on a regular file unexpectedly succeed");
+        ramfs
+            .create(
+                parent,
+                &DEntry {
+                    name: String::from("bar"),
+                    ntype: NodeType::RegularFile,
+                },
+            )
+            .expect_err("create on a regular file unexpectedly succeed");
     }
 
     #[test]
     fn read_directory() {
         let mut ramfs = RamFs::new();
 
-        let node_id = ramfs.create(
-            NODE_ID_ROOT,
-            &DEntry {
-                name: String::from("foo"),
-                ntype: NodeType::Directory,
-            }
-        ).unwrap();
+        let node_id = ramfs
+            .create(
+                NODE_ID_ROOT,
+                &DEntry {
+                    name: String::from("foo"),
+                    ntype: NodeType::Directory,
+                },
+            )
+            .unwrap();
 
         let mut buf: [u8; 10] = [0; 10];
-        ramfs.read(node_id, 0, &mut buf)
+        ramfs
+            .read(node_id, 0, &mut buf)
             .expect_err("read on a directory unexpectedly succeed");
     }
 
@@ -211,16 +215,19 @@ mod tests {
     fn write_directory() {
         let mut ramfs = RamFs::new();
 
-        let node_id = ramfs.create(
-            NODE_ID_ROOT,
-            &DEntry {
-                name: String::from("foo"),
-                ntype: NodeType::Directory,
-            }
-        ).unwrap();
+        let node_id = ramfs
+            .create(
+                NODE_ID_ROOT,
+                &DEntry {
+                    name: String::from("foo"),
+                    ntype: NodeType::Directory,
+                },
+            )
+            .unwrap();
 
         let buf: [u8; 10] = [0; 10];
-        ramfs.write(node_id, 0, &buf)
+        ramfs
+            .write(node_id, 0, &buf)
             .expect_err("write on a directory unexpectedly succeed");
     }
 
@@ -228,13 +235,15 @@ mod tests {
     fn write_sparse() {
         let mut ramfs = RamFs::new();
 
-        let node_id = ramfs.create(
-            NODE_ID_ROOT,
-            &DEntry {
-                name: String::from("foo"),
-                ntype: NodeType::RegularFile,
-            }
-        ).unwrap();
+        let node_id = ramfs
+            .create(
+                NODE_ID_ROOT,
+                &DEntry {
+                    name: String::from("foo"),
+                    ntype: NodeType::RegularFile,
+                },
+            )
+            .unwrap();
 
         let buf1: [u8; 2] = [1; 2];
         let buf2: [u8; 2] = [2; 2];

@@ -11,10 +11,7 @@ pub struct FsError {
 
 impl FsError {
     pub fn new(errno: posix::Errno, message: String) -> Self {
-        Self {
-            errno,
-            message,
-        }
+        Self { errno, message }
     }
 }
 
@@ -44,13 +41,13 @@ pub trait FileSystem {
             match self.readdir(dir, pos)? {
                 Some((ent, node_id)) => {
                     if ent.name == *name {
-                        return Ok(Some(node_id))
+                        return Ok(Some(node_id));
                     }
-                },
+                }
                 None => return Ok(None),
             }
             pos += 1
-        };
+        }
     }
 
     fn lookup_path(&self, path: &[&str]) -> Result<Option<NodeId>, FsError> {
@@ -67,32 +64,29 @@ pub trait FileSystem {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::{
-        DEntry,
-        FsError,
-        NodeType,
-    };
     use crate::posix;
+    use crate::{DEntry, FsError, NodeType};
 
     #[test]
     fn fserror_debug() {
-        let err = FsError::new(
-            posix::Errno::EINVAL,
-            String::from("test error"));
-        assert_eq!(format!("{:?}", err),
-                   "FsError { errno: EINVAL, message: \"test error\" }");
+        let err = FsError::new(posix::Errno::EINVAL, String::from("test error"));
+        assert_eq!(
+            format!("{:?}", err),
+            "FsError { errno: EINVAL, message: \"test error\" }"
+        );
     }
 
     #[test]
     fn dentry_debug() {
-        let dent = DEntry{
+        let dent = DEntry {
             name: String::from("test_file"),
             ntype: NodeType::RegularFile,
         };
-        assert_eq!(format!("{:?}", dent),
-                   "DEntry { name: \"test_file\", ntype: RegularFile }");
+        assert_eq!(
+            format!("{:?}", dent),
+            "DEntry { name: \"test_file\", ntype: RegularFile }"
+        );
     }
 }

@@ -1,9 +1,5 @@
 extern crate elf_parser;
-use elf_parser::{
-    ElfParser,
-    ElfSymbol,
-    ElfSymbolType,
-};
+use elf_parser::{ElfParser, ElfSymbol, ElfSymbolType};
 
 extern crate rustc_demangle;
 use rustc_demangle::demangle;

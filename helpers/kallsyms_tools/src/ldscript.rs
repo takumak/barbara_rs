@@ -3,12 +3,12 @@ use std::io;
 extern crate kallsyms_enc;
 
 pub fn ldscript<T>(filename: &String, writer: &mut T)
-where T: io::Write
+where
+    T: io::Write,
 {
     use crate::symbol::symbols_from_file;
 
-    let symbols: Vec<(String, u32)> =
-        symbols_from_file(&filename)
+    let symbols: Vec<(String, u32)> = symbols_from_file(&filename)
         .into_iter()
         .map(|s| (s.name, s.addr))
         .collect();
@@ -16,7 +16,9 @@ where T: io::Write
 
     writer.write(b"SECTIONS {\n").unwrap();
     writer.write(b"    .kallsyms : {\n").unwrap();
-    writer.write(b"        . = __kallsyms_dummy + 12;\n").unwrap();
+    writer
+        .write(b"        . = __kallsyms_dummy + 12;\n")
+        .unwrap();
     writer.write(b"        . = ALIGN(4);\n").unwrap();
     writer.write(b"        __kallsyms = .;\n").unwrap();
 
@@ -29,7 +31,7 @@ where T: io::Write
             }
         } else {
             let q = u64::from_le_bytes(<[u8; 8]>::try_from(qbytes).unwrap());
-            let end = if i % 4 == 3 { "\n" } else {" "};
+            let end = if i % 4 == 3 { "\n" } else { " " };
             let src = format!("QUAD({:#x});{}", q, end);
             writer.write(src.as_bytes()).unwrap();
         }

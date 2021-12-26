@@ -48,10 +48,7 @@ pub fn make_dic(syms: Vec<&[u8]>) -> Vec<(Vec<u8>, usize)> {
         update_chars(&mut chars, &syms);
     }
 
-    dic.extend(
-        chars
-            .iter_by_freq()
-            .map(|(c, s)| (vec![c], s)));
+    dic.extend(chars.iter_by_freq().map(|(c, s)| (vec![c], s)));
 
     dic
 }
@@ -62,11 +59,7 @@ mod tests {
 
     #[test]
     fn test() {
-        let syms: Vec<&[u8]> = vec![
-            b"foo_test_1",
-            b"bar1_test_23",
-            b"bar2_test_456",
-        ];
+        let syms: Vec<&[u8]> = vec![b"foo_test_1", b"bar1_test_23", b"bar2_test_456"];
 
         assert_eq!(
             make_dic(syms),

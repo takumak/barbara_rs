@@ -1,12 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(no_coverage)]
 
-use core::{
-    alloc::GlobalAlloc,
-    cell::UnsafeCell,
-    mem::size_of,
-    ptr,
-};
+use core::{alloc::GlobalAlloc, cell::UnsafeCell, mem::size_of, ptr};
 extern crate alloc;
 use alloc::alloc::Layout;
 
@@ -59,7 +54,10 @@ struct AreaIterator {
 
 impl AreaIterator {
     fn new(head: *mut Area) -> Self {
-        Self { curr: head, prev: ptr::null_mut() }
+        Self {
+            curr: head,
+            prev: ptr::null_mut(),
+        }
     }
 }
 
@@ -71,12 +69,11 @@ impl Iterator for AreaIterator {
             None
         } else {
             let curr = unsafe { &mut *self.curr };
-            let prev =
-                if self.prev.is_null() {
-                    None
-                } else {
-                    Some(unsafe { &mut *self.prev })
-                };
+            let prev = if self.prev.is_null() {
+                None
+            } else {
+                Some(unsafe { &mut *self.prev })
+            };
             self.curr = curr.next;
             self.prev = curr;
             Some((curr, prev))
@@ -90,7 +87,9 @@ struct AreaList {
 
 impl AreaList {
     const fn new() -> AreaList {
-        AreaList { head: ptr::null_mut() }
+        AreaList {
+            head: ptr::null_mut(),
+        }
     }
 
     fn init(&mut self, addr: usize, size: usize) {
@@ -127,16 +126,20 @@ impl LinkedListAllocator {
         let mem_end = align_down(Area::size_align(), mem_end);
 
         if mem_end <= mem_top {
-            panic!("Invalid heap area: top={:p} >= bottom={:p}",
-                   mem_top as *const u8, mem_end as *const u8);
+            panic!(
+                "Invalid heap area: top={:p} >= bottom={:p}",
+                mem_top as *const u8, mem_end as *const u8
+            );
         }
 
         let mem_size = mem_end - mem_top;
 
         let min_size = Area::size_align() * 100;
         if mem_size < min_size {
-            panic!("Heap area too small: given={:#08x}, required={:#08x}",
-                   mem_size, min_size);
+            panic!(
+                "Heap area too small: given={:#08x}, required={:#08x}",
+                mem_size, min_size
+            );
         }
 
         self.initialized = true;
@@ -176,15 +179,14 @@ impl LinkedListAllocator {
 
         let target = target.unwrap();
         let result = target.addr() as *mut u8;
-        let prev_next: *mut Area =
-            if size == target_size {
-                target.next
-            } else {
-                let next = &mut *((target.addr() + size) as *mut Area);
-                next.set_bottom(target.bottom());
-                next.next = target.next;
-                next
-            };
+        let prev_next: *mut Area = if size == target_size {
+            target.next
+        } else {
+            let next = &mut *((target.addr() + size) as *mut Area);
+            next.set_bottom(target.bottom());
+            next.next = target.next;
+            next
+        };
 
         if target_prev.is_none() {
             list.head = prev_next;
@@ -334,9 +336,11 @@ mod tests {
                 let next = unsafe { (*area).next };
 
                 if print {
-                    print!("  top+{:04x}(size={:x}",
-                           area as usize - self.allocator.mem_top,
-                           size);
+                    print!(
+                        "  top+{:04x}(size={:x}",
+                        area as usize - self.allocator.mem_top,
+                        size
+                    );
                 }
 
                 if area as usize + size > self.allocator.mem_end {
@@ -363,8 +367,7 @@ mod tests {
                     }
                 } else if self.is_in_mem_range(next as usize) {
                     if print {
-                        println!("top+{:04x}",
-                                 next as usize - self.allocator.mem_top);
+                        println!("top+{:04x}", next as usize - self.allocator.mem_top);
                     }
                 } else {
                     if print {
@@ -479,10 +482,10 @@ mod tests {
 
         for _ in 0..100 {
             loop {
-                let size = rng.gen_range(1, TEST_HEAP_SIZE/128) * 4;
+                let size = rng.gen_range(1, TEST_HEAP_SIZE / 128) * 4;
                 let ptr = heap.alloc(size);
                 if ptr.is_null() {
-                    break
+                    break;
                 }
                 free_list.push((ptr, size));
             }
@@ -522,7 +525,7 @@ mod tests {
     fn region_size_1() {
         let mut allocator = LinkedListAllocator::new();
         let buf: [u8; 0x1000] = [0; 0x1000];
-        let addr:usize = buf.as_ptr() as usize;
+        let addr: usize = buf.as_ptr() as usize;
         allocator.init(addr, addr + (core::mem::size_of::<usize>() * 2 * 99));
     }
 
@@ -530,7 +533,7 @@ mod tests {
     fn region_size_2() {
         let mut allocator = LinkedListAllocator::new();
         let buf: [u8; 0x1000] = [0; 0x1000];
-        let addr:usize = buf.as_ptr() as usize;
+        let addr: usize = buf.as_ptr() as usize;
         allocator.init(addr, addr + (core::mem::size_of::<usize>() * 2 * 100));
     }
 }

@@ -1,5 +1,5 @@
 extern crate kallsyms_dec;
-use kallsyms_dec::{KAllSyms, KAddress};
+use kallsyms_dec::{KAddress, KAllSyms};
 
 use crate::decl_c_symbol_addr;
 decl_c_symbol_addr!(__kallsyms, kallsyms_addr);

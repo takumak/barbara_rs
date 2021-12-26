@@ -1,5 +1,5 @@
-extern crate linked_list_allocator;
 extern crate alloc;
+extern crate linked_list_allocator;
 use alloc::alloc::Layout;
 
 use crate::decl_c_symbol_addr;

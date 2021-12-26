@@ -50,7 +50,7 @@ impl<'a> Iterator for KMPSearchAll<'a> {
                     let pos = self.curr + i;
                     self.curr = pos + self.pattern.len();
                     Some(pos)
-                },
+                }
                 None => {
                     self.curr = self.subject.len();
                     None
@@ -60,9 +60,10 @@ impl<'a> Iterator for KMPSearchAll<'a> {
     }
 }
 
-pub fn kmp_search_all<'a>(pattern: &'a [u8], subject: &'a [u8]) ->
-    impl Iterator<Item = usize> + 'a
-{
+pub fn kmp_search_all<'a>(
+    pattern: &'a [u8],
+    subject: &'a [u8],
+) -> impl Iterator<Item = usize> + 'a {
     KMPSearchAll {
         pattern,
         subject,
@@ -72,10 +73,7 @@ pub fn kmp_search_all<'a>(pattern: &'a [u8], subject: &'a [u8]) ->
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        kmp_search,
-        kmp_search_all,
-    };
+    use crate::{kmp_search, kmp_search_all};
 
     #[test]
     #[should_panic]
@@ -105,14 +103,16 @@ mod tests {
 
     #[test]
     fn mismatch_and_match() {
-        assert_eq!(kmp_search(&"abc".as_bytes(), &"ab abcd".as_bytes()), Some(3));
+        assert_eq!(
+            kmp_search(&"abc".as_bytes(), &"ab abcd".as_bytes()),
+            Some(3)
+        );
     }
 
     #[test]
     fn all_not_match() {
         assert_eq!(
-            kmp_search_all(&"ab".as_bytes(), &"aaa".as_bytes())
-                .collect::<Vec<usize>>(),
+            kmp_search_all(&"ab".as_bytes(), &"aaa".as_bytes()).collect::<Vec<usize>>(),
             vec![]
         );
     }
@@ -120,8 +120,7 @@ mod tests {
     #[test]
     fn all_match_one() {
         assert_eq!(
-            kmp_search_all(&"aa".as_bytes(), &"aaa".as_bytes())
-                .collect::<Vec<usize>>(),
+            kmp_search_all(&"aa".as_bytes(), &"aaa".as_bytes()).collect::<Vec<usize>>(),
             vec![0]
         );
     }
@@ -129,8 +128,7 @@ mod tests {
     #[test]
     fn all_match_two() {
         assert_eq!(
-            kmp_search_all(&"aa".as_bytes(), &"aaaa".as_bytes())
-                .collect::<Vec<usize>>(),
+            kmp_search_all(&"aa".as_bytes(), &"aaaa".as_bytes()).collect::<Vec<usize>>(),
             vec![0, 2]
         );
     }
@@ -138,8 +136,7 @@ mod tests {
     #[test]
     fn all_match_two_2() {
         assert_eq!(
-            kmp_search_all(&"ab".as_bytes(), &"aabaab".as_bytes())
-                .collect::<Vec<usize>>(),
+            kmp_search_all(&"ab".as_bytes(), &"aabaab".as_bytes()).collect::<Vec<usize>>(),
             vec![1, 4]
         );
     }

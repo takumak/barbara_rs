@@ -1,8 +1,4 @@
-use core::{
-    arch::asm,
-    panic::PanicInfo,
-    ptr,
-};
+use core::{arch::asm, panic::PanicInfo, ptr};
 
 #[macro_export]
 macro_rules! decl_c_symbol_addr {
@@ -14,7 +10,7 @@ macro_rules! decl_c_symbol_addr {
         fn $wrapper_name() -> usize {
             unsafe { &$sym_name as *const _ as usize }
         }
-    }
+    };
 }
 
 decl_c_symbol_addr!(__bss_s, bss_s);
@@ -32,10 +28,7 @@ unsafe extern "C" fn __reset() {
     ptr::write_bytes(bss_s() as *mut u8, 0, size);
 
     let size = data_e() - data_s();
-    ptr::copy_nonoverlapping(
-        rodata_s() as *const u8,
-        data_s() as *mut u8,
-        size);
+    ptr::copy_nonoverlapping(rodata_s() as *const u8, data_s() as *mut u8, size);
 
     use crate::main;
     main()
@@ -48,15 +41,11 @@ fn panic(panic_info: &PanicInfo) -> ! {
         println!("{}", *message);
     }
     if let Some(location) = panic_info.location() {
-        println!(
-            "location: {}:{}",
-            location.file(),
-            location.line(),
-        );
+        println!("location: {}:{}", location.file(), location.line(),);
     }
 
     unsafe { asm!("bkpt 0x80") }
-    loop {};
+    loop {}
 }
 
 union Vector {
@@ -84,16 +73,28 @@ static __vector_table: [Vector; 16] = [
     Vector { handler: __stack_e }, // initial sp
     Vector { handler: __reset },
     Vector { handler: __nmi },
-    Vector { handler: __hardfault },
-    Vector { handler: __memmanage },
-    Vector { handler: __busfault },
-    Vector { handler: __usagefault },
-    Vector { handler: __securefault },
+    Vector {
+        handler: __hardfault,
+    },
+    Vector {
+        handler: __memmanage,
+    },
+    Vector {
+        handler: __busfault,
+    },
+    Vector {
+        handler: __usagefault,
+    },
+    Vector {
+        handler: __securefault,
+    },
     Vector { reserved: 0 },
     Vector { reserved: 0 },
     Vector { reserved: 0 },
     Vector { handler: __svc },
-    Vector { handler: __debugmon },
+    Vector {
+        handler: __debugmon,
+    },
     Vector { reserved: 0 },
     Vector { handler: __pendsv },
     Vector { handler: __systick },
@@ -197,9 +198,9 @@ unsafe extern "C" fn __unhandled_exception(regs_addr: usize) {
             let mut buf: [u8; 128] = [0; 128];
             match kallsyms::safe_search(addr, &mut buf) {
                 Some((name, off)) => println!("  {:08x}  {} +{:#x}", addr, name, off),
-                None              => println!("  {:08x}", addr)
+                None => println!("  {:08x}", addr),
             }
-        }
+        },
     );
 
     use crate::semihosting;

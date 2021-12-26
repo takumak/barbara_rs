@@ -1,18 +1,13 @@
 #![feature(const_btree_new)]
 #![feature(no_coverage)]
 
-extern crate posix;
 extern crate alloc;
+extern crate posix;
 
-use alloc::{
-    boxed::Box,
-    collections::btree_map::BTreeMap,
-    string::String,
-    vec::Vec,
-};
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, vec::Vec};
 use bitfield::bitfield;
 
-bitfield!{
+bitfield! {
     pub OpenMode: u32 {
         READ[0];
         WRITE[1];
@@ -22,18 +17,11 @@ bitfield!{
     }
 }
 
-mod fscore;
 mod fs_ramfs;
+mod fscore;
 
-use fscore::{
-    DEntry,
-    FileSystem,
-    FsError,
-    NodeId,
-    NodeType,
-    NODE_ID_ROOT,
-};
 use fs_ramfs::RamFs;
+use fscore::{DEntry, FileSystem, FsError, NodeId, NodeType, NODE_ID_ROOT};
 
 type MountId = usize;
 type FileDescriptor = i32;
@@ -92,7 +80,11 @@ impl Vfs {
             if mountpoint != "/" {
                 return Err(FsError::new(
                     posix::Errno::EINVAL,
-                    format!("Non-root mountpoint specified for the first time: {}", mountpoint)));
+                    format!(
+                        "Non-root mountpoint specified for the first time: {}",
+                        mountpoint
+                    ),
+                ));
             }
         } else {
             let fd = self.open(mountpoint, OpenMode::READ)?;
@@ -101,18 +93,24 @@ impl Vfs {
             if dent?.is_some() {
                 return Err(FsError::new(
                     posix::Errno::EEXIST,
-                    format!("Mountpoint is not empty: {}", mountpoint)));
+                    format!("Mountpoint is not empty: {}", mountpoint),
+                ));
             }
         }
 
         let mountpoint = Self::parse_path(mountpoint)
-            .iter().map(|&s| String::from(s)).collect();
+            .iter()
+            .map(|&s| String::from(s))
+            .collect();
 
-        self.mount.insert(0, Mount {
-            id: self.next_mnt_id,
-            mountpoint,
-            filesystem,
-        });
+        self.mount.insert(
+            0,
+            Mount {
+                id: self.next_mnt_id,
+                mountpoint,
+                filesystem,
+            },
+        );
 
         self.next_mnt_id += 1;
 
@@ -124,14 +122,19 @@ impl Vfs {
             .expect("Failed to mount root");
     }
 
-    fn find_mount_by_path_mut<'a, 'b>(&'a mut self, path: &'b str) ->
-        (&'a mut Mount, Vec<&'b str>)
-    {
+    fn find_mount_by_path_mut<'a, 'b>(
+        &'a mut self,
+        path: &'b str,
+    ) -> (&'a mut Mount, Vec<&'b str>) {
         let path: Vec<&'b str> = Self::parse_path(path);
         let mut mount: Option<&'a mut Mount> = None;
         for m in self.mount.iter_mut() {
-            if path.iter().take(m.mountpoint.len()).map(|s| *s).eq(
-                m.mountpoint.iter().map(|s| s.as_str())) {
+            if path
+                .iter()
+                .take(m.mountpoint.len())
+                .map(|s| *s)
+                .eq(m.mountpoint.iter().map(|s| s.as_str()))
+            {
                 mount = Some(m);
                 break;
             }
@@ -142,15 +145,20 @@ impl Vfs {
         (mount, mpath)
     }
 
-    fn get_file_mount_from_fd(&mut self, fd: FileDescriptor) ->
-        Result<(&mut OpenedFile, &mut Mount), FsError>
-    {
-        let file = self.opened_files.get_mut(&fd)
-            .ok_or(FsError::new(
-                posix::Errno::EBADF,
-                format!("Invalid file descriptor: {}", fd)))?;
+    fn get_file_mount_from_fd(
+        &mut self,
+        fd: FileDescriptor,
+    ) -> Result<(&mut OpenedFile, &mut Mount), FsError> {
+        let file = self.opened_files.get_mut(&fd).ok_or(FsError::new(
+            posix::Errno::EBADF,
+            format!("Invalid file descriptor: {}", fd),
+        ))?;
 
-        let mount = self.mount.iter_mut().find(|m| m.id == file.mount_id).unwrap();
+        let mount = self
+            .mount
+            .iter_mut()
+            .find(|m| m.id == file.mount_id)
+            .unwrap();
 
         Ok((file, mount))
     }
@@ -158,45 +166,47 @@ impl Vfs {
     fn open(&mut self, path: &str, mode: OpenMode) -> Result<FileDescriptor, FsError> {
         let (mount, mpath) = self.find_mount_by_path_mut(path);
 
-        let node_id =
-            if mpath.len() == 0 {
-                NODE_ID_ROOT
-            } else {
-                let dirname = &mpath[..(mpath.len() - 1)];
-                let filename = mpath[mpath.len() - 1];
+        let node_id = if mpath.len() == 0 {
+            NODE_ID_ROOT
+        } else {
+            let dirname = &mpath[..(mpath.len() - 1)];
+            let filename = mpath[mpath.len() - 1];
 
-                let dir = mount.filesystem.lookup_path(dirname)?
-                    .ok_or(FsError::new(
-                        posix::Errno::ENOENT,
-                        format!("File not found: {:?}", path)))?;
+            let dir = mount.filesystem.lookup_path(dirname)?.ok_or(FsError::new(
+                posix::Errno::ENOENT,
+                format!("File not found: {:?}", path),
+            ))?;
 
-                match mount.filesystem.lookup(dir, filename)? {
-                    Some(node_id) => node_id,
-                    None => {
-                        if mode.is_set(OpenMode::CREATE) {
-                            mount.filesystem.create(dir, &DEntry {
+            match mount.filesystem.lookup(dir, filename)? {
+                Some(node_id) => node_id,
+                None => {
+                    if mode.is_set(OpenMode::CREATE) {
+                        mount.filesystem.create(
+                            dir,
+                            &DEntry {
                                 name: String::from(filename),
                                 ntype: NodeType::RegularFile,
-                            })?
-                        } else {
-                            return Err(FsError::new(
-                                posix::Errno::ENOENT,
-                                format!("File not found: {:?}", path)));
-                        }
-                    },
+                            },
+                        )?
+                    } else {
+                        return Err(FsError::new(
+                            posix::Errno::ENOENT,
+                            format!("File not found: {:?}", path),
+                        ));
+                    }
                 }
-            };
+            }
+        };
 
         if mode.is_set(OpenMode::TRUNC) {
             mount.filesystem.truncate(node_id, 0)?;
         }
 
-        let pos: usize =
-            if mode.is_set(OpenMode::APPEND) {
-                mount.filesystem.getsize(node_id)?
-            } else {
-                0
-            };
+        let pos: usize = if mode.is_set(OpenMode::APPEND) {
+            mount.filesystem.getsize(node_id)?
+        } else {
+            0
+        };
 
         let mount_id = mount.id; // mount, *self borrow ends here
 
@@ -221,7 +231,8 @@ impl Vfs {
         if !file.mode.is_set(OpenMode::READ) {
             return Err(FsError::new(
                 posix::Errno::EPERM,
-                format!("Permission error: fd={}", fd)));
+                format!("Permission error: fd={}", fd),
+            ));
         }
 
         let size = mount.filesystem.read(file.node_id, file.pos, data)?;
@@ -235,7 +246,8 @@ impl Vfs {
         if !file.mode.is_set(OpenMode::WRITE) {
             return Err(FsError::new(
                 posix::Errno::EPERM,
-                format!("Permission error: fd={}", fd)));
+                format!("Permission error: fd={}", fd),
+            ));
         }
 
         let size = mount.filesystem.write(file.node_id, file.pos, data)?;
@@ -244,10 +256,10 @@ impl Vfs {
     }
 
     fn close(&mut self, fd: FileDescriptor) -> Result<(), FsError> {
-        self.opened_files.remove(&fd)
-            .ok_or(FsError::new(
-                posix::Errno::EBADF,
-                format!("Invalid file descriptor: {}", fd)))?;
+        self.opened_files.remove(&fd).ok_or(FsError::new(
+            posix::Errno::EBADF,
+            format!("Invalid file descriptor: {}", fd),
+        ))?;
         Ok(())
     }
 
@@ -257,26 +269,34 @@ impl Vfs {
         if mpath.len() == 0 {
             return Err(FsError::new(
                 posix::Errno::EEXIST,
-                format!("Directory exists: {}", path)));
+                format!("Directory exists: {}", path),
+            ));
         }
 
         let parent_name = &mpath[..(mpath.len() - 1)];
         let create_name = mpath[mpath.len() - 1];
 
-        let dir = mount.filesystem.lookup_path(parent_name)?
+        let dir = mount
+            .filesystem
+            .lookup_path(parent_name)?
             .ok_or(FsError::new(
                 posix::Errno::ENOENT,
-                format!("Directory not found: {:?}", path)))?;
+                format!("Directory not found: {:?}", path),
+            ))?;
 
         match mount.filesystem.lookup(dir, create_name)? {
             Some(_) => Err(FsError::new(
                 posix::Errno::EEXIST,
-                format!("Path exists: {}", path))),
+                format!("Path exists: {}", path),
+            )),
             None => {
-                mount.filesystem.create(dir, &DEntry {
-                    name: String::from(create_name),
-                    ntype: NodeType::Directory,
-                })?;
+                mount.filesystem.create(
+                    dir,
+                    &DEntry {
+                        name: String::from(create_name),
+                        ntype: NodeType::Directory,
+                    },
+                )?;
                 Ok(())
             }
         }
@@ -289,7 +309,7 @@ impl Vfs {
             Some((dent, _)) => {
                 file.pos += 1;
                 Some(dent)
-            },
+            }
             None => None,
         };
         Ok(res)
@@ -335,12 +355,7 @@ pub unsafe fn readdir(fd: FileDescriptor) -> Result<Option<DEntry>, FsError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        NodeType,
-        OpenMode,
-        RamFs,
-        Vfs,
-    };
+    use crate::{NodeType, OpenMode, RamFs, Vfs};
 
     #[test]
     fn parse_path() {
@@ -365,7 +380,9 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "foo\n".as_bytes()).unwrap();
         vfs.write(fd, "bar\n".as_bytes()).unwrap();
         vfs.write(fd, "baz\n".as_bytes()).unwrap();
@@ -396,18 +413,22 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "foo\n".as_bytes()).unwrap();
         vfs.write(fd, "bar\n".as_bytes()).unwrap();
         vfs.write(fd, "baz\n".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 
-        let fd = vfs.open("/foo.txt", OpenMode::READ | OpenMode::WRITE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::READ | OpenMode::WRITE)
+            .unwrap();
         let mut buf: [u8; 30] = [0; 30];
         let mut pos: usize = 0;
-        pos += vfs.read(fd, &mut buf[pos..(pos+4)]).unwrap();
+        pos += vfs.read(fd, &mut buf[pos..(pos + 4)]).unwrap();
         vfs.write(fd, "***\n".as_bytes()).unwrap();
-        pos += vfs.read(fd, &mut buf[pos..(pos+4)]).unwrap();
+        pos += vfs.read(fd, &mut buf[pos..(pos + 4)]).unwrap();
         vfs.close(fd).unwrap();
 
         assert_eq!(buf[..pos], *"foo\nbaz\n".as_bytes());
@@ -425,7 +446,9 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "foo\n".as_bytes()).unwrap();
         vfs.write(fd, "bar\n".as_bytes()).unwrap();
         vfs.write(fd, "baz\n".as_bytes()).unwrap();
@@ -443,7 +466,9 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "foo\n".as_bytes()).unwrap();
         vfs.write(fd, "bar\n".as_bytes()).unwrap();
         vfs.write(fd, "baz\n".as_bytes()).unwrap();
@@ -460,7 +485,9 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "foo\n".as_bytes()).unwrap();
         vfs.write(fd, "bar\n".as_bytes()).unwrap();
         vfs.write(fd, "baz\n".as_bytes()).unwrap();
@@ -483,13 +510,17 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "foo\n".as_bytes()).unwrap();
         vfs.write(fd, "bar\n".as_bytes()).unwrap();
         vfs.write(fd, "baz\n".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::TRUNC).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::TRUNC)
+            .unwrap();
         vfs.write(fd, "***\n".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 
@@ -506,13 +537,20 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "foo\n".as_bytes()).unwrap();
         vfs.write(fd, "bar\n".as_bytes()).unwrap();
         vfs.write(fd, "baz\n".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::TRUNC | OpenMode::APPEND).unwrap();
+        let fd = vfs
+            .open(
+                "/foo.txt",
+                OpenMode::WRITE | OpenMode::TRUNC | OpenMode::APPEND,
+            )
+            .unwrap();
         vfs.write(fd, "***\n".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 
@@ -529,13 +567,17 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "foo\n".as_bytes()).unwrap();
         vfs.write(fd, "bar\n".as_bytes()).unwrap();
         vfs.write(fd, "baz\n".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::APPEND).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::APPEND)
+            .unwrap();
         vfs.write(fd, "***\n".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 
@@ -552,13 +594,17 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "/foo.txt".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 
         vfs.mkdir("/hoge").unwrap();
 
-        let fd = vfs.open("/hoge/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/hoge/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "/hoge/foo.txt".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 
@@ -750,7 +796,9 @@ mod tests {
         let mut vfs = Vfs::new();
         vfs.init();
 
-        let fd = vfs.open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE).unwrap();
+        let fd = vfs
+            .open("/foo.txt", OpenMode::WRITE | OpenMode::CREATE)
+            .unwrap();
         vfs.write(fd, "foo".as_bytes()).unwrap();
         vfs.close(fd).unwrap();
 

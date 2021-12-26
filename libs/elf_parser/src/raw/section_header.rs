@@ -23,7 +23,7 @@ pub enum ElfSectionHeaderType {
     Group,
     SymtabShndx,
     Num,
-    Unknown(u32)
+    Unknown(u32),
 }
 
 bits_struct! {
@@ -72,11 +72,7 @@ bits_struct! {
 
 #[cfg(test)]
 mod tests {
-    use crate::raw::section_header::{
-        ElfSectionHeader,
-        Elf32SectionHeader,
-        ElfSectionHeaderType,
-    };
+    use crate::raw::section_header::{Elf32SectionHeader, ElfSectionHeader, ElfSectionHeaderType};
 
     #[test]
     fn sectionheadertype_partialeq() {

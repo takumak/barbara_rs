@@ -7,13 +7,13 @@
 
 extern crate alloc;
 
-mod handlers;
-mod backtrace;
-mod semihosting;
-mod console;
 mod arm_uart;
-mod kallsyms;
+mod backtrace;
+mod console;
+mod handlers;
 mod heap;
+mod kallsyms;
+mod semihosting;
 
 use arm_uart::ArmUart;
 const __CONSOLE: *mut ArmUart = 0x4020_0000 as *mut ArmUart;
@@ -48,5 +48,5 @@ pub fn main() -> ! {
     }
 
     semihosting::shutdown();
-    loop {};
+    loop {}
 }

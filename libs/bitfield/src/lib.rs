@@ -65,7 +65,7 @@ macro_rules! bitfield {
 
 #[cfg(test)]
 mod tests {
-    bitfield!{
+    bitfield! {
         OpenMode: u32 {
             READ[0];
             WRITE[1];
@@ -108,14 +108,15 @@ mod tests {
         assert_eq!(mode.is_set(OpenMode::CREATE), true);
         assert_eq!(mode.is_set(OpenMode::APPEND), false);
 
-        assert_eq!(mode.is_set(OpenMode::READ |
-                               OpenMode::WRITE |
-                               OpenMode::CREATE |
-                               OpenMode::APPEND), false);
+        assert_eq!(
+            mode.is_set(OpenMode::READ | OpenMode::WRITE | OpenMode::CREATE | OpenMode::APPEND),
+            false
+        );
 
-        assert_eq!(mode.is_set(OpenMode::READ |
-                               OpenMode::WRITE |
-                               OpenMode::CREATE), true);
+        assert_eq!(
+            mode.is_set(OpenMode::READ | OpenMode::WRITE | OpenMode::CREATE),
+            true
+        );
 
         assert_eq!(mode.extract(OpenMode::NUM1), 0);
         assert_eq!(mode.extract(OpenMode::NUM3), 0);

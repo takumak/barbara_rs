@@ -4,14 +4,7 @@ use posix::Errno;
 extern crate stpack;
 use stpack::{stpack, Stpack};
 
-use crate::{
-    ElfClass,
-    ElfEndian,
-    ElfSectionHeaderType,
-    ElfParserError,
-    ElfSection,
-    ElfSymbol,
-};
+use crate::{ElfClass, ElfEndian, ElfParserError, ElfSection, ElfSectionHeaderType, ElfSymbol};
 
 stpack! {
     pub(crate) struct Elf32SymtabEntry {
@@ -44,10 +37,11 @@ pub struct ElfSymtabIterator<'a> {
 }
 
 impl<'a> ElfSymtabIterator<'a> {
-    pub(crate) fn new(class: ElfClass,
-                      endian: ElfEndian,
-                      sections: &'a Vec<ElfSection<'a>>) -> Self
-    {
+    pub(crate) fn new(
+        class: ElfClass,
+        endian: ElfEndian,
+        sections: &'a Vec<ElfSection<'a>>,
+    ) -> Self {
         Self {
             class,
             le: endian == ElfEndian::ElfLE,
@@ -75,7 +69,9 @@ impl<'a> Iterator for ElfSymtabIterator<'a> {
             if sec.typ == ElfSectionHeaderType::Symtab {
                 if sec.entsize == 0 {
                     return Some(Err(ElfParserError::new(
-                        Errno::EINVAL, String::from("Symtab section entry size is 0 (file broken)"))))
+                        Errno::EINVAL,
+                        String::from("Symtab section entry size is 0 (file broken)"),
+                    )));
                 }
 
                 if symidx < (sec.content.len() / (sec.entsize as usize)) {
@@ -98,53 +94,63 @@ impl<'a> Iterator for ElfSymtabIterator<'a> {
         let data = &sec.content[(sec.entsize as usize * symidx)..];
 
         let (nameoff, value, size, info, other, shndx) = match self.class {
-            ElfClass::Elf32 =>
-                match Elf32SymtabEntry::unpack(data, self.le) {
-                    Ok(ent) => (
-                        ent.name as usize,
-                        ent.value as u64,
-                        ent.size as u64,
-                        ent.info,
-                        ent.other,
-                        ent.shndx,
-                    ),
-                    Err(_) => return Some(Err(ElfParserError::new(
-                        Errno::EINVAL, String::from("Failed to parse symtab entry")))),
-                },
-            ElfClass::Elf64 =>
-                match Elf64SymtabEntry::unpack(data, self.le) {
-                    Ok(ent) => (
-                        ent.name as usize,
-                        ent.value,
-                        ent.size,
-                        ent.info,
-                        ent.other,
-                        ent.shndx,
-                    ),
-                    Err(_) => return Some(Err(ElfParserError::new(
-                        Errno::EINVAL, String::from("Failed to parse symtab entry")))),
-                },
+            ElfClass::Elf32 => match Elf32SymtabEntry::unpack(data, self.le) {
+                Ok(ent) => (
+                    ent.name as usize,
+                    ent.value as u64,
+                    ent.size as u64,
+                    ent.info,
+                    ent.other,
+                    ent.shndx,
+                ),
+                Err(_) => {
+                    return Some(Err(ElfParserError::new(
+                        Errno::EINVAL,
+                        String::from("Failed to parse symtab entry"),
+                    )))
+                }
+            },
+            ElfClass::Elf64 => match Elf64SymtabEntry::unpack(data, self.le) {
+                Ok(ent) => (
+                    ent.name as usize,
+                    ent.value,
+                    ent.size,
+                    ent.info,
+                    ent.other,
+                    ent.shndx,
+                ),
+                Err(_) => {
+                    return Some(Err(ElfParserError::new(
+                        Errno::EINVAL,
+                        String::from("Failed to parse symtab entry"),
+                    )))
+                }
+            },
         };
 
         if sec.link as usize >= self.sections.len() {
             return Some(Err(ElfParserError::new(
                 Errno::EINVAL,
-                format!("Symtab refer invalid strtab section index: \
+                format!(
+                    "Symtab refer invalid strtab section index: \
                          {} (must be less than {})",
-                        sec.link, self.sections.len()))));
+                    sec.link,
+                    self.sections.len()
+                ),
+            )));
         }
 
         let strtab_sec = &self.sections[sec.link as usize];
         if strtab_sec.typ != ElfSectionHeaderType::Strtab {
             return Some(Err(ElfParserError::new(
                 Errno::EINVAL,
-                format!("Symtab linked section is not SHT_STRTAB: {}", sec.link))));
+                format!("Symtab linked section is not SHT_STRTAB: {}", sec.link),
+            )));
         }
 
         use crate::raw::strtab;
 
-        let name = strtab::read_at(
-            strtab_sec.content, nameoff);
+        let name = strtab::read_at(strtab_sec.content, nameoff);
 
         self.curr_symidx = symidx + 1;
 
@@ -162,23 +168,14 @@ impl<'a> Iterator for ElfSymtabIterator<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ElfClass,
-        ElfEndian,
-        ElfSection,
-        ElfSectionHeaderType,
-        ElfSymbol,
-        ElfSymtabIterator,
-        symtab::{
-            Elf32SymtabEntry,
-            Elf64SymtabEntry,
-        },
         stpack::Stpack,
+        symtab::{Elf32SymtabEntry, Elf64SymtabEntry},
+        ElfClass, ElfEndian, ElfSection, ElfSectionHeaderType, ElfSymbol, ElfSymtabIterator,
     };
 
     #[test]
     fn elf32be_first_section_is_zero_length_symtab() {
         let sections = vec![
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Symtab,
@@ -190,7 +187,6 @@ mod tests {
                 entsize: Elf32SymtabEntry::SIZE as u64,
                 content: &[] as &[u8],
             },
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Symtab,
@@ -201,15 +197,14 @@ mod tests {
                 addralign: 0,
                 entsize: Elf32SymtabEntry::SIZE as u64,
                 content: &[
-                    0, 0, 0, 1,                 // name
-                    0x11, 0x22, 0x33, 0x44,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
+                    0, 0, 0, 1, // name
+                    0x11, 0x22, 0x33, 0x44, // addr
+                    0, 0, 0, 0, // size
+                    0, // info
+                    0, // other
+                    0, 0, // shndx
                 ],
             },
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Strtab,
@@ -219,37 +214,28 @@ mod tests {
                 info: 0,
                 addralign: 0,
                 entsize: 0,
-                content: &[
-                    0,
-                    b't', b'e', b's', b't', 0,
-                ],
+                content: &[0, b't', b'e', b's', b't', 0],
             },
-
         ];
 
         assert_eq!(
-            ElfSymtabIterator::new(ElfClass::Elf32,
-                                   ElfEndian::ElfBE,
-                                   &sections)
+            ElfSymtabIterator::new(ElfClass::Elf32, ElfEndian::ElfBE, &sections)
                 .map(|r| r.unwrap())
                 .collect::<Vec<ElfSymbol>>(),
-            vec![
-                ElfSymbol {
-                    name: b"test",
-                    value: 0x11223344u64,
-                    size: 0,
-                    info: 0,
-                    other: 0,
-                    shndx: 0,
-                },
-            ]
+            vec![ElfSymbol {
+                name: b"test",
+                value: 0x11223344u64,
+                size: 0,
+                info: 0,
+                other: 0,
+                shndx: 0,
+            },]
         );
     }
 
     #[test]
     fn elf32be_invalid_symtab_entsize() {
         let sections = vec![
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Symtab,
@@ -260,15 +246,14 @@ mod tests {
                 addralign: 0,
                 entsize: 0,
                 content: &[
-                    0, 0, 0, 1,                 // name
-                    0x11, 0x22, 0x33, 0x44,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
+                    0, 0, 0, 1, // name
+                    0x11, 0x22, 0x33, 0x44, // addr
+                    0, 0, 0, 0, // size
+                    0, // info
+                    0, // other
+                    0, 0, // shndx
                 ],
             },
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Strtab,
@@ -278,26 +263,20 @@ mod tests {
                 info: 0,
                 addralign: 0,
                 entsize: 0,
-                content: &[
-                    0,
-                    b't', b'e', b's', b't', 0,
-                ],
+                content: &[0, b't', b'e', b's', b't', 0],
             },
-
         ];
 
-        let mut iter =
-            ElfSymtabIterator::new(
-                ElfClass::Elf32, ElfEndian::ElfBE, &sections);
+        let mut iter = ElfSymtabIterator::new(ElfClass::Elf32, ElfEndian::ElfBE, &sections);
 
-        iter.next().unwrap().expect_err(
-            "Parsing broken symtab unexpectedly succeed");
+        iter.next()
+            .unwrap()
+            .expect_err("Parsing broken symtab unexpectedly succeed");
     }
 
     #[test]
     fn elf32be_incomplete_symtab() {
         let sections = vec![
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Symtab,
@@ -308,15 +287,14 @@ mod tests {
                 addralign: 0,
                 entsize: Elf32SymtabEntry::SIZE as u64 - 1,
                 content: &[
-                    0, 0, 0, 1,                 // name
-                    0x11, 0x22, 0x33, 0x44,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
+                    0, 0, 0, 1, // name
+                    0x11, 0x22, 0x33, 0x44, // addr
+                    0, 0, 0, 0, // size
+                    0, // info
+                    0, // other
                     0, // 0,                       // shndx
                 ],
             },
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Strtab,
@@ -326,26 +304,20 @@ mod tests {
                 info: 0,
                 addralign: 0,
                 entsize: 0,
-                content: &[
-                    0,
-                    b't', b'e', b's', b't', 0,
-                ],
+                content: &[0, b't', b'e', b's', b't', 0],
             },
-
         ];
 
-        let mut iter =
-            ElfSymtabIterator::new(
-                ElfClass::Elf32, ElfEndian::ElfBE, &sections);
+        let mut iter = ElfSymtabIterator::new(ElfClass::Elf32, ElfEndian::ElfBE, &sections);
 
-        iter.next().unwrap().expect_err(
-            "Parsing broken symtab unexpectedly succeed");
+        iter.next()
+            .unwrap()
+            .expect_err("Parsing broken symtab unexpectedly succeed");
     }
 
     #[test]
     fn elf32be_symtab_link_out_of_range() {
         let sections = vec![
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Symtab,
@@ -356,15 +328,14 @@ mod tests {
                 addralign: 0,
                 entsize: Elf32SymtabEntry::SIZE as u64,
                 content: &[
-                    0, 0, 0, 1,                 // name
-                    0x11, 0x22, 0x33, 0x44,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
+                    0, 0, 0, 1, // name
+                    0x11, 0x22, 0x33, 0x44, // addr
+                    0, 0, 0, 0, // size
+                    0, // info
+                    0, // other
+                    0, 0, // shndx
                 ],
             },
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Strtab,
@@ -374,26 +345,20 @@ mod tests {
                 info: 0,
                 addralign: 0,
                 entsize: 0,
-                content: &[
-                    0,
-                    b't', b'e', b's', b't', 0,
-                ],
+                content: &[0, b't', b'e', b's', b't', 0],
             },
-
         ];
 
-        let mut iter =
-            ElfSymtabIterator::new(
-                ElfClass::Elf32, ElfEndian::ElfBE, &sections);
+        let mut iter = ElfSymtabIterator::new(ElfClass::Elf32, ElfEndian::ElfBE, &sections);
 
-        iter.next().unwrap().expect_err(
-            "Parsing broken symtab unexpectedly succeed");
+        iter.next()
+            .unwrap()
+            .expect_err("Parsing broken symtab unexpectedly succeed");
     }
 
     #[test]
     fn elf64le() {
         let sections = vec![
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Symtab,
@@ -404,17 +369,16 @@ mod tests {
                 addralign: 0,
                 entsize: Elf64SymtabEntry::SIZE as u64,
                 content: &[
-                    1, 0, 0, 0,                 // name
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
-                    0xff, 0xee, 0xdd, 0xcc,     // addr
-                    0xbb, 0xaa, 0x99, 0x88,     // addr
-                    0, 0, 0, 0,                 // size
-                    0, 0, 0, 0,                 // size
+                    1, 0, 0, 0, // name
+                    0, // info
+                    0, // other
+                    0, 0, // shndx
+                    0xff, 0xee, 0xdd, 0xcc, // addr
+                    0xbb, 0xaa, 0x99, 0x88, // addr
+                    0, 0, 0, 0, // size
+                    0, 0, 0, 0, // size
                 ],
             },
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Strtab,
@@ -424,37 +388,28 @@ mod tests {
                 info: 0,
                 addralign: 0,
                 entsize: 0,
-                content: &[
-                    0,
-                    b't', b'e', b's', b't', 0,
-                ],
+                content: &[0, b't', b'e', b's', b't', 0],
             },
-
         ];
 
         assert_eq!(
-            ElfSymtabIterator::new(ElfClass::Elf64,
-                                   ElfEndian::ElfLE,
-                                   &sections)
+            ElfSymtabIterator::new(ElfClass::Elf64, ElfEndian::ElfLE, &sections)
                 .map(|r| r.unwrap())
                 .collect::<Vec<ElfSymbol>>(),
-            vec![
-                ElfSymbol {
-                    name: b"test",
-                    value: 0x8899aabb_ccddeeffu64,
-                    size: 0,
-                    info: 0,
-                    other: 0,
-                    shndx: 0,
-                },
-            ]
+            vec![ElfSymbol {
+                name: b"test",
+                value: 0x8899aabb_ccddeeffu64,
+                size: 0,
+                info: 0,
+                other: 0,
+                shndx: 0,
+            },]
         );
     }
 
     #[test]
     fn elf64le_incomplete_symtab() {
         let sections = vec![
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Symtab,
@@ -465,17 +420,16 @@ mod tests {
                 addralign: 0,
                 entsize: Elf64SymtabEntry::SIZE as u64 - 1,
                 content: &[
-                    1, 0, 0, 0,                 // name
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
-                    0xff, 0xee, 0xdd, 0xcc,     // addr
-                    0xbb, 0xaa, 0x99, 0x88,     // addr
-                    0, 0, 0, 0,                 // size
+                    1, 0, 0, 0, // name
+                    0, // info
+                    0, // other
+                    0, 0, // shndx
+                    0xff, 0xee, 0xdd, 0xcc, // addr
+                    0xbb, 0xaa, 0x99, 0x88, // addr
+                    0, 0, 0, 0, // size
                     0, 0, 0, // 0,                 // size
                 ],
             },
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Strtab,
@@ -485,26 +439,20 @@ mod tests {
                 info: 0,
                 addralign: 0,
                 entsize: 0,
-                content: &[
-                    0,
-                    b't', b'e', b's', b't', 0,
-                ],
+                content: &[0, b't', b'e', b's', b't', 0],
             },
-
         ];
 
-        let mut iter =
-            ElfSymtabIterator::new(
-                ElfClass::Elf64, ElfEndian::ElfLE, &sections);
+        let mut iter = ElfSymtabIterator::new(ElfClass::Elf64, ElfEndian::ElfLE, &sections);
 
-        iter.next().unwrap().expect_err(
-            "Parsing broken symtab unexpectedly succeed");
+        iter.next()
+            .unwrap()
+            .expect_err("Parsing broken symtab unexpectedly succeed");
     }
 
     #[test]
     fn elf32be_shstrtab_invalid_type() {
         let sections = vec![
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Symtab,
@@ -515,15 +463,14 @@ mod tests {
                 addralign: 0,
                 entsize: Elf32SymtabEntry::SIZE as u64,
                 content: &[
-                    0, 0, 0, 1,                 // name
-                    0x11, 0x22, 0x33, 0x44,     // addr
-                    0, 0, 0, 0,                 // size
-                    0,                          // info
-                    0,                          // other
-                    0, 0,                       // shndx
+                    0, 0, 0, 1, // name
+                    0x11, 0x22, 0x33, 0x44, // addr
+                    0, 0, 0, 0, // size
+                    0, // info
+                    0, // other
+                    0, 0, // shndx
                 ],
             },
-
             ElfSection {
                 name: b"",
                 typ: ElfSectionHeaderType::Symtab,
@@ -533,19 +480,14 @@ mod tests {
                 info: 0,
                 addralign: 0,
                 entsize: 0,
-                content: &[
-                    0,
-                    b't', b'e', b's', b't', 0,
-                ],
+                content: &[0, b't', b'e', b's', b't', 0],
             },
-
         ];
 
-        let mut iter =
-            ElfSymtabIterator::new(
-                ElfClass::Elf32, ElfEndian::ElfBE, &sections);
+        let mut iter = ElfSymtabIterator::new(ElfClass::Elf32, ElfEndian::ElfBE, &sections);
 
-        iter.next().unwrap().expect_err(
-            "Parsing broken symtab unexpectedly succeed");
+        iter.next()
+            .unwrap()
+            .expect_err("Parsing broken symtab unexpectedly succeed");
     }
 }

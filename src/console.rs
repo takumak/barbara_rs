@@ -2,13 +2,13 @@ use core::fmt;
 use core::fmt::Write;
 
 pub trait Console {
-    fn init(&mut self) { }
+    fn init(&mut self) {}
     fn putc(&mut self, byte: u8);
     fn flush(&self);
 }
 
 struct Writer {
-    console: *mut dyn Console
+    console: *mut dyn Console,
 }
 
 impl Writer {
@@ -17,9 +17,7 @@ impl Writer {
     }
 
     fn putc(&mut self, byte: u8) {
-        unsafe {
-            (*self.console).putc(byte)
-        }
+        unsafe { (*self.console).putc(byte) }
     }
 }
 

@@ -208,7 +208,11 @@ mod tests {
     #[test]
     fn size_too_small() {
         let mut data: [u8; 6] = [0; 6];
-        let foo = Foo { foo: 0, bar: 0, baz: 0 };
+        let foo = Foo {
+            foo: 0,
+            bar: 0,
+            baz: 0,
+        };
         assert_eq!(Foo::unpack_le(&data), Err(()));
         assert_eq!(foo.pack_le(&mut data), Err(()));
     }
@@ -217,6 +221,9 @@ mod tests {
     fn test_debug() {
         let data: Vec<u8> = (0..7).collect();
         let foo = Foo::unpack_be(&data).unwrap();
-        assert_eq!(format!("{:?}", foo), "Foo { foo: 0, bar: 258, baz: 50595078 }");
+        assert_eq!(
+            format!("{:?}", foo),
+            "Foo { foo: 0, bar: 258, baz: 50595078 }"
+        );
     }
 }

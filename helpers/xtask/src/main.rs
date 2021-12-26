@@ -1,5 +1,5 @@
-use std::{env, fs, path, process};
 use std::os::unix::fs::PermissionsExt;
+use std::{env, fs, path, process};
 
 extern crate serde;
 extern crate serde_json;
@@ -48,8 +48,10 @@ fn build_linker_wrapper() -> String {
     let args = vec![
         "build",
         "-q",
-        "--package", "kallsyms_tools",
-        "--bin", "link",
+        "--package",
+        "kallsyms_tools",
+        "--bin",
+        "link",
         "--message-format=json",
     ];
 
@@ -71,9 +73,7 @@ fn build_linker_wrapper() -> String {
         }
     }
 
-    let status = child
-        .wait()
-        .expect("wait failed");
+    let status = child.wait().expect("wait failed");
 
     assert!(status.success(), "failed to execute: {:?}", cargo);
 
@@ -92,13 +92,9 @@ fn cargo_target(cmd: &str, args: &Vec<String>) {
     rustflags += " -C force-frame-pointers=y";
 
     let mut cargo = process::Command::new("cargo");
-    cargo
-        .args(args_all)
-        .env("RUSTFLAGS", rustflags);
+    cargo.args(args_all).env("RUSTFLAGS", rustflags);
 
-    let status = cargo
-        .status()
-        .expect("failed to execute cargo process");
+    let status = cargo.status().expect("failed to execute cargo process");
 
     assert!(status.success(), "failed to execute: {:?}", cargo);
 }
@@ -134,7 +130,6 @@ struct CoverageSummaryItem {
 }
 
 fn cargo_testall(args: &Vec<String>) {
-
     /* Remove previously generated coverage data */
 
     let cov_dir = env::current_dir().unwrap().join("cov");
@@ -142,11 +137,14 @@ fn cargo_testall(args: &Vec<String>) {
         fs::create_dir(&cov_dir).unwrap();
     }
 
-    let profraw_files =
-        |cov_dir: &path::PathBuf| cov_dir.read_dir().unwrap()
-        .filter(|e| e.is_ok())
-        .map(|e| e.unwrap().path())
-        .filter(|p| p.to_str().unwrap_or("").ends_with(".profraw"));
+    let profraw_files = |cov_dir: &path::PathBuf| {
+        cov_dir
+            .read_dir()
+            .unwrap()
+            .filter(|e| e.is_ok())
+            .map(|e| e.unwrap().path())
+            .filter(|p| p.to_str().unwrap_or("").ends_with(".profraw"))
+    };
 
     for p in profraw_files(&cov_dir) {
         fs::remove_file(p).unwrap();
@@ -164,7 +162,8 @@ fn cargo_testall(args: &Vec<String>) {
         "--workspace",
         "--lib",
         "--no-run",
-        "--message-format", "json",
+        "--message-format",
+        "json",
     ];
     args_all.extend(args.iter().map(|s| &**s));
 
@@ -183,21 +182,15 @@ fn cargo_testall(args: &Vec<String>) {
     for msg in deserializer.into_iter::<CompilerMessage>() {
         let msg = msg.unwrap();
         if msg.reason == "compiler-artifact" && msg.executable.is_some() {
-            let name =
-                match msg.target {
-                    Some(t) => t.name,
-                    None => String::from("????"),
-                };
-            test_progs.push((
-                name,
-                msg.executable.unwrap(),
-            ));
+            let name = match msg.target {
+                Some(t) => t.name,
+                None => String::from("????"),
+            };
+            test_progs.push((name, msg.executable.unwrap()));
         }
     }
 
-    let status = child
-        .wait()
-        .expect("wait failed");
+    let status = child.wait().expect("wait failed");
 
     assert!(status.success(), "failed to execute: {:?}", cargo);
 
@@ -208,13 +201,12 @@ fn cargo_testall(args: &Vec<String>) {
 
         println!("**** {} ****", name);
 
-        cmd.env("LLVM_PROFILE_FILE",
-                format!("{}/json5format-%m.profraw",
-                        cov_dir.to_str().unwrap_or(".")));
+        cmd.env(
+            "LLVM_PROFILE_FILE",
+            format!("{}/json5format-%m.profraw", cov_dir.to_str().unwrap_or(".")),
+        );
 
-        let status = cmd
-            .status()
-            .expect("failed to execute cargo process");
+        let status = cmd.status().expect("failed to execute cargo process");
 
         assert!(status.success(), "failed to execute: {:?}", cargo);
     }
@@ -222,30 +214,31 @@ fn cargo_testall(args: &Vec<String>) {
     // merge coverage report
 
     let mut args: Vec<String> = vec![
-        "profdata", "--",
+        "profdata",
+        "--",
         "merge",
         "--sparse",
         "-o",
         "json5format.profdata",
-    ].iter().map(|&s| s.into()).collect();
+    ]
+    .iter()
+    .map(|&s| s.into())
+    .collect();
     for p in profraw_files(&cov_dir) {
         args.push(p.to_str().unwrap().to_owned());
     }
     let mut cargo = process::Command::new("cargo");
-    cargo
-        .current_dir(&cov_dir)
-        .args(args);
+    cargo.current_dir(&cov_dir).args(args);
 
-    let status = cargo
-        .status()
-        .expect("failed to execute cargo process");
+    let status = cargo.status().expect("failed to execute cargo process");
 
     assert!(status.success(), "failed to execute: {:?}", cargo);
 
     // generate coverage report HTML
 
     let mut args: Vec<String> = vec![
-        "cov", "--",
+        "cov",
+        "--",
         "show",
         "--ignore-filename-regex=/.cargo/registry",
         "--ignore-filename-regex=/library/std/",
@@ -255,35 +248,38 @@ fn cargo_testall(args: &Vec<String>) {
         "--Xdemangler=rustfilt",
         "--format=html",
         "--output-dir=.",
-    ].iter().map(|&s| s.into()).collect();
+    ]
+    .iter()
+    .map(|&s| s.into())
+    .collect();
     for (_, prog) in test_progs.iter() {
         args.push("--object".into());
         args.push(prog.clone());
     }
 
     let mut cargo = process::Command::new("cargo");
-    cargo
-        .current_dir(&cov_dir)
-        .args(args);
+    cargo.current_dir(&cov_dir).args(args);
 
     println!("Run: {:?}", cargo);
 
-    let status = cargo
-        .status()
-        .expect("failed to execute cargo process");
+    let status = cargo.status().expect("failed to execute cargo process");
 
     assert!(status.success(), "failed to execute: {:?}", cargo);
 
     // show coverage summary
 
     let mut args: Vec<String> = vec![
-        "cov", "--",
+        "cov",
+        "--",
         "export",
         "--format=text",
         "--ignore-filename-regex=/.cargo/registry",
         "--ignore-filename-regex=/library/std/",
         "--instr-profile=json5format.profdata",
-    ].iter().map(|&s| s.into()).collect();
+    ]
+    .iter()
+    .map(|&s| s.into())
+    .collect();
     for (_, prog) in test_progs.iter() {
         args.push("--object".into());
         args.push(prog.clone());
@@ -297,26 +293,20 @@ fn cargo_testall(args: &Vec<String>) {
 
     println!("Run: {:?}", cargo);
 
-    let output = cargo
-        .output()
-        .expect("failed to spawn cargo command");
+    let output = cargo.output().expect("failed to spawn cargo command");
 
-    let cov: Coverage = serde_json::from_slice(
-        output.stdout.as_slice()).unwrap();
+    let cov: Coverage = serde_json::from_slice(output.stdout.as_slice()).unwrap();
 
-    use prettytable::format::{
-        FormatBuilder,
-        LinePosition,
-        LineSeparator,
-    };
+    use prettytable::format::{FormatBuilder, LinePosition, LineSeparator};
     let mut table = prettytable::Table::new();
     table.set_format(
         FormatBuilder::new()
-            .separator(LinePosition::Title,  LineSeparator::new('-', '+', '+', '+'))
+            .separator(LinePosition::Title, LineSeparator::new('-', '+', '+', '+'))
             .separator(LinePosition::Bottom, LineSeparator::new('-', '+', '+', '+'))
-            .separator(LinePosition::Top,    LineSeparator::new('-', '+', '+', '+'))
+            .separator(LinePosition::Top, LineSeparator::new('-', '+', '+', '+'))
             .padding(2, 2)
-            .build());
+            .build(),
+    );
     table.set_titles(prettytable::Row::new(vec![
         prettytable::Cell::new("Filename"),
         prettytable::Cell::new("Regions"),
@@ -328,36 +318,29 @@ fn cargo_testall(args: &Vec<String>) {
         for file in data.files {
             let mut filename = file.filename;
             if filename.starts_with(&rootdir) {
-                filename = String::from(
-                    filename.strip_prefix(&rootdir).unwrap());
+                filename = String::from(filename.strip_prefix(&rootdir).unwrap());
             }
 
-            use prettytable::{Row, Cell, color, Attr};
+            use prettytable::{color, Attr, Cell, Row};
             let mut row = Row::empty();
             row.add_cell(Cell::new(filename.as_str()));
 
-            for col in [file.summary.regions,
-                        file.summary.functions,
-                        file.summary.lines] {
-                let text =
-                    format!("{:.2} ({}/{})",
-                            col.percent,
-                            col.covered,
-                            col.count);
+            for col in [
+                file.summary.regions,
+                file.summary.functions,
+                file.summary.lines,
+            ] {
+                let text = format!("{:.2} ({}/{})", col.percent, col.covered, col.count);
 
-                let c =
-                    if col.covered == col.count {
-                        color::GREEN
-                    } else if col.percent >= 80. {
-                        color::YELLOW
-                    } else {
-                        color::RED
-                    };
+                let c = if col.covered == col.count {
+                    color::GREEN
+                } else if col.percent >= 80. {
+                    color::YELLOW
+                } else {
+                    color::RED
+                };
 
-                row.add_cell(
-                    Cell::new(text.as_str())
-                        .with_style(
-                            Attr::ForegroundColor(c)));
+                row.add_cell(Cell::new(text.as_str()).with_style(Attr::ForegroundColor(c)));
             }
 
             table.add_row(row);
@@ -370,13 +353,8 @@ fn cargo_testall(args: &Vec<String>) {
     fn fix_permission(p: &path::Path) {
         let _ = fs::set_permissions(
             p,
-            PermissionsExt::from_mode(
-                if p.is_dir() {
-                    0o755
-                } else {
-                    0o644
-                }
-            ));
+            PermissionsExt::from_mode(if p.is_dir() { 0o755 } else { 0o644 }),
+        );
 
         if p.is_dir() {
             let r = fs::read_dir(p);
@@ -397,12 +375,8 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Some(Commands::Run { args }) => {
-            cargo_target("run", args)
-        }
-        Some(Commands::Build { args }) => {
-            cargo_target("build", args)
-        }
+        Some(Commands::Run { args }) => cargo_target("run", args),
+        Some(Commands::Build { args }) => cargo_target("build", args),
         Some(Commands::Testall { args }) => {
             cargo_testall(args);
         }

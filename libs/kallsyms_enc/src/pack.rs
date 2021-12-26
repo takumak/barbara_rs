@@ -5,18 +5,13 @@ extern crate kmp_search;
 use kmp_search::kmp_search_all;
 
 extern crate kallsyms_dec;
-use kallsyms_dec::{
-    Header,
-    AddrTblEntry,
-    StrTblOff,
-};
+use kallsyms_dec::{AddrTblEntry, Header, StrTblOff};
 
 fn str_table(data: &Vec<Vec<u8>>) -> Vec<u8> {
     let mut result: Vec<u8> = Vec::new();
 
     // write offset table
-    let mut off: StrTblOff =
-        (core::mem::size_of::<StrTblOff>() * data.len()) as StrTblOff;
+    let mut off: StrTblOff = (core::mem::size_of::<StrTblOff>() * data.len()) as StrTblOff;
     for s in data.iter() {
         result.extend_from_slice(&off.to_le_bytes());
         off += s.len() as StrTblOff + 1;
@@ -64,13 +59,13 @@ pub fn pack(symbols: &Vec<(String, u32)>) -> Vec<u8> {
         symbols
             .iter()
             .map(|(name, _addr)| name.as_bytes())
-            .collect())
-        .iter()
-        .map(|(tok, _cnt)| tok.clone())
-        .collect();
+            .collect(),
+    )
+    .iter()
+    .map(|(tok, _cnt)| tok.clone())
+    .collect();
 
-    let names: Vec<Vec<u8>> =
-        symbols
+    let names: Vec<Vec<u8>> = symbols
         .iter()
         .map(|(name, _addr)| tokenize(name.as_bytes(), &dic))
         .collect();
@@ -81,8 +76,7 @@ pub fn pack(symbols: &Vec<(String, u32)>) -> Vec<u8> {
     // compose header
     let count = symbols.len() as u16;
     let addr_table_off = Header::SIZE as u16;
-    let name_table_off = addr_table_off +
-        (core::mem::size_of::<AddrTblEntry>() as u16 * count);
+    let name_table_off = addr_table_off + (core::mem::size_of::<AddrTblEntry>() as u16 * count);
     let token_table_off = name_table_off + name_table.len() as u16;
 
     let header = Header {
@@ -98,39 +92,25 @@ pub fn pack(symbols: &Vec<(String, u32)>) -> Vec<u8> {
     result.extend_from_slice(&[0u8; Header::SIZE]);
     header.pack_le(result.as_mut_slice()).unwrap();
     for (_name, addr) in symbols.iter() {
-        result.extend_from_slice(
-            &(*addr as AddrTblEntry).to_le_bytes());
+        result.extend_from_slice(&(*addr as AddrTblEntry).to_le_bytes());
     }
     result.append(&mut name_table);
     result.append(&mut token_table);
     result
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::pack::{
-        str_table,
-        tokenize,
-    };
+    use crate::pack::{str_table, tokenize};
 
     #[test]
     fn str_table_1() {
         assert_eq!(
-            str_table(&vec![
-                vec![0u8, 1],
-                vec![2u8, 3, 4],
-                vec![5u8],
-            ]),
+            str_table(&vec![vec![0u8, 1], vec![2u8, 3, 4], vec![5u8],]),
             vec![
                 // offsets
-                6u8, 0,
-                9, 0,
-                13, 0,
-                // payload
-                2, 0, 1,
-                3, 2, 3, 4,
-                1, 5,
+                6u8, 0, 9, 0, 13, 0, // payload
+                2, 0, 1, 3, 2, 3, 4, 1, 5,
             ]
         )
     }
@@ -139,12 +119,7 @@ mod tests {
     fn tokenize_1() {
         assert_eq!(
             tokenize(
-                &[
-                    0u8, 1, 2, 3,
-                    4, 5, 6, 7,
-                    8, 9, 10, 11,
-                    12, 13, 14, 15,
-                ],
+                &[0u8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,],
                 &vec![
                     vec![4u8, 5, 6, 7], // 0
                     vec![9u8, 10, 11],  // 1
