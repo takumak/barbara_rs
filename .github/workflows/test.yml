@@ -1,0 +1,25 @@
+name: Test
+
+on: [push]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: nightly
+        override: true
+    - run: rustup component add llvm-tools-preview
+    - run: cargo install cargo-binutils
+    - run: cargo install rustfilt
+    - name: Run tests
+      run: cargo xtask testall
